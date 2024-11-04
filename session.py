@@ -77,9 +77,14 @@ class Session:
         self.num_neurons = units['units'].shape[1]
         self.num_trials = units['units'][0,0].shape[1]
         
+        self.units = units['units'][0] # Shape: (units,)(1, trials)
+        for trial in range(units['stabletrials'][0].shape[0]):
+            units['stabletrials'][0,trial] = units['stabletrials'][0,trial][0] - 1 # Convert to 0 index
+        self.stable_trials = units['stabletrials'][0] # Shape: (units,)(stable_trials,)
         
         # Behavior
-        behavior = scio.loadmat(os.path.join(path,"behavior.mat"))
+        beh_name = laser + 'passive_behavior.mat' if passive else 'behavior.mat'
+        behavior = scio.loadmat(os.path.join(path, beh_name))
         self.L_correct = cat(behavior['L_hit_tmp'])
         self.R_correct = cat(behavior['R_hit_tmp'])
         
@@ -108,17 +113,174 @@ class Session:
         
         self.stim_ON = cat(behavior['StimDur_tmp']) > 0
         
-        
+        self.i_good_trials = cat(behavior['i_good_trials']) - 1 # zero indexing in python
+
         if 'StimLevel' in behavior.keys():
             self.stim_level = cat(behavior['StimLevel'])
-            
-        if self.i_good_trials[-1] > self.num_trials:
-            
-            print('More Bpod trials than 2 photon trials')
-            self.i_good_trials = [i for i in self.i_good_trials if i < self.num_trials]
-            self.stim_ON = self.stim_ON[:self.num_trials]
+
         
         # Re-adjust with i good trials
         self.stim_trials = np.where(self.stim_ON)[0]
-
         
+    ### BEHAVIOR ONLY FUNCTIONS ###
+    
+    def performance_in_trials(self, trials):
+        """
+        Get the performance as a percentage correct for the given trials numbers
+
+        Parameters
+        ----------
+        trials : list
+            List of trials to calculate correctness.
+
+        Returns
+        -------
+        A single number corresponding to proportion correct in left and right trials.
+
+        """
+        
+        proportion_correct_left = np.sum(self.L_correct[trials]) / np.sum(self.L_correct[trials] + self.L_wrong[trials] + self.L_ignore[trials])
+        proportion_correct_right = np.sum(self.R_correct[trials]) /  np.sum(self.R_correct[trials] + self.R_wrong[trials] + self.R_ignore[trials])
+        proportion_correct = np.sum(self.L_correct[trials] + self.R_correct[trials]) / np.sum(self.L_correct[trials] + 
+                                                                                              self.L_wrong[trials] + 
+                                                                                              self.L_ignore[trials] +
+                                                                                              self.R_correct[trials] + 
+                                                                                              self.R_wrong[trials] + 
+                                                                                              self.R_ignore[trials])
+                                                                                          
+    
+        return proportion_correct_right, proportion_correct_left, proportion_correct
+    
+    def lick_correct_direction(self, direction):
+        """Finds trial numbers corresponding to correct lick in specified direction
+
+        Parameters
+        ----------
+        direction : str
+            'r' or 'l' indicating desired lick direction
+        
+        Returns
+        -------
+        idx : array
+            list of correct, no early lick, i_good trials licking in specified
+            direction
+        """
+        
+        if direction == 'l':
+            idx = np.where(self.L_correct == 1)[0]
+        elif direction == 'r':
+            idx = np.where(self.R_correct == 1)[0]
+        else:
+            raise Exception("Sorry, only 'r' or 'l' input accepted!")
+            
+        early_idx = np.where(self.early_lick == 1)[0]
+        
+        idx = [i for i in idx if i not in early_idx]
+        
+        idx = [i for i in idx if i in self.i_good_trials]
+        
+        return idx
+    
+    def lick_incorrect_direction(self, direction):
+        """Finds trial numbers corresponding to incorrect lick in specified direction
+
+        Parameters
+        ----------
+        direction : str
+            'r' or 'l' indicating desired lick direction
+        
+        Returns
+        -------
+        idx : array
+            list of incorrect, no early lick, i_good trials licking in specified
+            direction
+        """
+        
+        if direction == 'l':
+            idx = np.where(self.L_wrong == 1)[0]
+        elif direction == 'r':
+            idx = np.where(self.R_wrong == 1)[0]
+        else:
+            raise Exception("Sorry, only 'r' or 'l' input accepted!")
+            
+        early_idx = np.where(self.early_lick == 1)[0]
+        
+        idx = [i for i in idx if i not in early_idx]
+        
+        idx = [i for i in idx if i in self.i_good_trials]
+        
+        return idx
+    
+    def lick_actual_direction(self, direction):
+        """Finds trial numbers corresponding to an actual lick direction
+        
+        Filters out early lick and non i_good trials but includes correct and 
+        error trials
+
+        Parameters
+        ----------
+        direction : str
+            'r' or 'l' indicating desired lick direction
+        
+        Returns
+        -------
+        idx : array
+            list of trials corresponding to specified lick direction
+        """
+        
+        ## Returns list of indices of actual lick left/right trials
+        
+        if direction == 'l':
+            idx = np.where((self.L_correct + self.R_wrong) == 1)[0]
+        elif direction == 'r':
+            idx = np.where((self.R_correct + self.L_wrong) == 1)[0]
+        else:
+            raise Exception("Sorry, only 'r' or 'l' input accepted!")
+            
+        early_idx = np.where(self.early_lick == 1)[0]
+        
+        idx = [i for i in idx if i not in early_idx]
+        
+        idx = [i for i in idx if i in self.i_good_trials]
+        
+        return idx
+    
+    def trial_type_direction(self, direction):
+        """Finds trial numbers corresponding to trial type direction
+        
+        Filters out early lick and non i_good trials but includes correct and 
+        error trials
+
+        Parameters
+        ----------
+        direction : str
+            'r' or 'l' indicating desired trial type
+        
+        Returns
+        -------
+        idx : array
+            list of trials corresponding to specified lick direction
+        """
+        
+        ## Returns list of indices of actual lick left/right trials
+        
+        if direction == 'l':
+            idx = np.where((self.L_correct + self.L_wrong) == 1)[0]
+        elif direction == 'r':
+            idx = np.where((self.R_correct + self.R_wrong) == 1)[0]
+        else:
+            raise Exception("Sorry, only 'r' or 'l' input accepted!")
+            
+        early_idx = np.where(self.early_lick == 1)[0]
+        
+        idx = [i for i in idx if i not in early_idx]
+        
+        idx = [i for i in idx if i in self.i_good_trials]
+        
+        return idx
+        
+    
+    ### NEURAL FUNCTIONS ###
+    def 
+
+
