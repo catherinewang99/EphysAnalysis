@@ -27,10 +27,64 @@ from statsmodels.stats.proportion import proportions_ztest
 path = r'H:\ephys_data\CW47\python\2024_10_17'
 
 s1 = Session(path, passive=True)
-
+#%%
 s1.plot_mean_waveform_by_celltype()
 
-#%% Plot width
+#%% Plot distribution of waveform withs
+
+values = []
+for n in s1.L_alm_idx:
+    
+    values += [s1.get_waveform_width(n)] # Plot in ms
+
+f = plt.figure()
+plt.hist(values)
+plt.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
+plt.axvline(0.35, color='grey', ls = '--')
+plt.axvline(0.45, color='grey', ls = '--')
+plt.ylabel('Number of neurons')
+plt.xlabel('Spike trough-to-peak (ms)')
+
+#%% Plot waveforms by cell type: FS and ppyr
+celltypes = [3,1] # FS and ppyr
+
+f = plt.figure()
+for c in celltypes:
+    neuron_cell_type = np.where(s1.celltype == c)[0]
+    color = 'red' if c == 1 else 'black'
+    for n in neuron_cell_type:
+        
+        plt.plot(np.arange(len(s1.get_single_waveform(n))),
+                 s1.get_single_waveform(n),
+                 color=color, alpha = 0.3)
+
+plt.gca().axes.get_yaxis().set_visible(False)  # Method 1
+plt.gca().axes.get_xaxis().set_visible(False)  # Method 1
+
+#%% Plot baseline spike rate vs spike width
+f = plt.figure()
+
+widths = []
+spkrt_baseline = []
+
+for n in range(s1.num_neurons):
+    
+    width = s1.get_waveform_width(n)
+    widths += [width]
+    all_stable_trials = [t for t in range(s1.num_trials) if t in s1.stable_trials[n]]
+    baseline = s1.get_spike_rate(n, (0.07, 0.57), all_stable_trials)
+    spkrt_baseline += baseline
+    
+    if width < 0.35:
+        plt.scatter(width, baseline, color='red')
+    elif width > 0.45:
+        plt.scatter(width, baseline, color='black')
+    else: 
+        plt.scatter(width, baseline, facecolors='none', edgecolors='brown')
+
+# plt.yscale('log')
+plt.ylabel('Spike rate, baseline (spks/s)')
+plt.xlabel('Spike trough-to-peak (ms)')
 
 
 #%% Get avg spk count for diff stim condition over cell types per neuron

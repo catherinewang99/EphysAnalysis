@@ -293,17 +293,17 @@ class Session:
     
     ### NEURAL FUNCTIONS ###
     
-    def get_waveform_minmax(self, neuron):
+    def get_waveform_width(self, neuron):
         
         wf = self.get_single_waveform(neuron)
         maxidx = np.argmax(wf)
         minidx = np.argmin(wf)
         
-        return (maxidx - minidx) / self.sampling_freq
+        return np.abs((maxidx - minidx) / self.sampling_freq * 1000) # by ms
     
     def get_single_waveform(self, neuron):
         # Peak channel is 165-246
-        wf = self.waveform[neuron][165:246] / np.linalg.norm(self.waveform[neuron][165:246])
+        wf = self.waveform[neuron][0, 165:246] / np.linalg.norm(self.waveform[neuron][0, 165:246])
         return wf 
 
     def plot_mean_waveform_by_celltype(self, both = True):
@@ -408,6 +408,7 @@ class Session:
 
         start, stop = window
         window_len = stop - start 
+        
         trial_spks = self.spks[neuron][0, trials]
         for arr in trial_spks:
             count = self.count_spikes(arr, window)
