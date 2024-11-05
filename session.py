@@ -72,15 +72,26 @@ class Session:
         units = copy.deepcopy(units_tmp)
             
         imec = units['imec']
-        self.unit_side = np.where(imec == 0, 'L', 'R')
+        self.unit_side = np.where(imec == 0, 'L', 'R')[0] # Shape: (units)
+        self.L_alm_idx = np.where(imec == 0)[1]
+        self.R_alm_idx = np.where(imec == 1)[1]
+        
+        self.celltype = units['celltype'][0] # Shape: (units,)
         
         self.num_neurons = units['units'].shape[1]
         self.num_trials = units['units'][0,0].shape[1]
         
-        self.units = units['units'][0] # Shape: (units,)(1, trials)
+        self.spks = units['units'][0] # Shape: (units,)(1, trials)
+        
         for trial in range(units['stabletrials'][0].shape[0]):
             units['stabletrials'][0,trial] = units['stabletrials'][0,trial][0] - 1 # Convert to 0 index
         self.stable_trials = units['stabletrials'][0] # Shape: (units,)(stable_trials,)
+        
+        self.waveform = units['mean_waveform'][0]
+        
+        self.data_type = 'ephys'
+        self.sample = .570 # 570 ms offset for sample start
+        self.sampling_freq = 30000 # 30k for npxl 2.0
         
         # Behavior
         beh_name = laser + 'passive_behavior.mat' if passive else 'behavior.mat'
@@ -117,7 +128,7 @@ class Session:
 
         if 'StimLevel' in behavior.keys():
             self.stim_level = cat(behavior['StimLevel'])
-
+            self.all_stim_levels = sorted(list(set(self.stim_level)))
         
         # Re-adjust with i good trials
         self.stim_trials = np.where(self.stim_ON)[0]
@@ -281,6 +292,128 @@ class Session:
         
     
     ### NEURAL FUNCTIONS ###
-    def 
+    
+    def get_waveform_minmax(self, neuron):
+        
+        wf = self.get_single_waveform(neuron)
+        maxidx = np.argmax(wf)
+        minidx = np.argmin(wf)
+        
+        return (maxidx - minidx) / self.sampling_freq
+    
+    def get_single_waveform(self, neuron):
+        # Peak channel is 165-246
+        wf = self.waveform[neuron][165:246] / np.linalg.norm(self.waveform[neuron][165:246])
+        return wf 
 
+    def plot_mean_waveform_by_celltype(self, both = True):
+        """
+        Plot waveforms by cell type
 
+        Parameters
+        ----------
+        both : bool, optional
+            Both sides L/R alm included. The default is True.
+
+        Returns
+        -------
+        Plots a 1x3 average waveform plot. 2x3 if both is true
+
+        """
+        
+        num_cell_types = len(set(self.celltype))
+        
+        if both:
+            f, ax = plt.subplots(2, num_cell_types, figsize=(15,8))
+        else:
+            f, ax = plt.subplots(1, num_cell_types)
+        
+        counts = []
+        
+        for l_unit in self.L_alm_idx: # go thru all the l units first
+            av_array = np.zeros(410)
+            counter = 0
+            for i in list(set(self.celltype)): # go thru all the cell types
+                if self.celltype[l_unit] == i:
+                    av_array = np.vstack((av_array, self.waveform[l_unit][0]))
+                    ax[0, i-1].plot(self.waveform[l_unit][0])
+                    counter += 1
+                counts += [counter]
+                
+                
+        for r_unit in self.R_alm_idx: # go thru all the r units 
+            av_array = np.zeros(410)
+            counter = 0
+            for i in list(set(self.celltype)): # go thru all the cell types
+                if self.celltype[r_unit] == i:
+                    av_array = np.vstack((av_array, self.waveform[r_unit][0]))
+                    ax[1, i-1].plot(self.waveform[r_unit][0])
+                    counter += 1
+                counts += [counter]
+
+    
+
+        ax[0,0].set_ylabel('L ALM waveforms')
+        ax[1,0].set_ylabel('R ALM waveforms')
+        ax[0,0].set_title('Cell type: FS')
+        ax[0,1].set_title('Cell type: intermediate')
+        ax[0,2].set_title('Cell type: ppyr')
+        ax[0,3].set_title('Cell type: pDS')
+        plt.show()
+        
+        
+        # return counts
+        
+    def count_spikes(self, arr, window):
+        """
+        Return the number of spikes in given arr within time window
+
+        Parameters
+        ----------
+        arr : array 
+            List of spike times. Shape: (timesteps, 1)
+        window : tuple, 
+            start and end of spike calculation.
+
+        Returns
+        -------
+        number denoting number of spikes.
+
+        """
+        start, stop = window
+        arr = arr[:,0]
+        count = np.sum((arr >= start) & (arr <= stop))
+        return count
+    
+    
+    def get_spike_rate(self, neuron, window, trials):
+        """
+        Get average spike rate of neuron in a window, over specified trials
+
+        Parameters
+        ----------
+        neuron : int
+            index of neuron.
+        window : tuple
+            start and end time over which to grab the spikes
+        trials : array
+            which trials to calculate over
+
+        Returns
+        -------
+        One number denoting avg spks/sec over trials.
+
+        """
+        all_spk_rate = []
+
+        start, stop = window
+        window_len = stop - start 
+        trial_spks = self.spks[neuron][0, trials]
+        for arr in trial_spks:
+            count = self.count_spikes(arr, window)
+            all_spk_rate += [count / window_len]
+            
+        return np.mean(all_spk_rate)
+    
+    def get_PSTH(self ):
+        return
