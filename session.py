@@ -66,7 +66,11 @@ class Session:
 
         """       
         
-            
+        self.path = path
+        self.laser = laser
+        self.side = side
+        self.passive = passive
+        
         name = laser + 'passive_units.mat' if passive else 'units.mat'
         units_tmp = scio.loadmat(os.path.join(path, name))
         units = copy.deepcopy(units_tmp)
@@ -296,14 +300,15 @@ class Session:
     def get_waveform_width(self, neuron):
         
         wf = self.get_single_waveform(neuron)
-        maxidx = np.argmax(wf)
         minidx = np.argmin(wf)
+        maxidx = np.argmax(wf[minidx:])
         
-        return np.abs((maxidx - minidx) / self.sampling_freq * 1000) # by ms
+        # return np.abs((maxidx - minidx) / self.sampling_freq * 1000) # by ms
+        return (maxidx / self.sampling_freq * 1000) # by ms
     
     def get_single_waveform(self, neuron):
         # Peak channel is 165-246
-        wf = self.waveform[neuron][0, 165:246] / np.linalg.norm(self.waveform[neuron][0, 165:246])
+        wf = self.waveform[neuron][0, 164:245] / np.linalg.norm(self.waveform[neuron][0, 164:245])
         return wf 
 
     def plot_mean_waveform_by_celltype(self, both = True):

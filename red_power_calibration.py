@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Nov  4 13:27:04 2024
+Created on Wed Nov  6 22:12:16 2024
 
 @author: catherinewang
 """
-
 
 
 import sys
@@ -23,12 +22,19 @@ from scipy import stats
 from statsmodels.stats.proportion import proportions_ztest
 
 ## Paths
+allpaths = [
+    r'H:\ephys_data\CW47\python\2024_10_19',
+    r'H:\ephys_data\CW47\python\2024_10_20',
+    r'H:\ephys_data\CW47\python\2024_10_21',
+    r'H:\ephys_data\CW47\python\2024_10_22',
+    r'H:\ephys_data\CW47\python\2024_10_23',
+    r'H:\ephys_data\CW47\python\2024_10_24'
+    ]
 
-path = r'H:\ephys_data\CW47\python\2024_10_17'
 
-s1 = Session(path, passive=True)
-#%%
-s1.plot_mean_waveform_by_celltype()
+path = r'H:\ephys_data\CW47\python\2024_10_19'
+
+s1 = Session(path, passive=True, laser = 'red')
 
 #%% Plot distribution of waveform withs
 
@@ -36,9 +42,7 @@ values = []
 # for n in s1.L_alm_idx:
 for n in range(s1.num_neurons):
     
-    if s1.celltype[n] == 3:# or s1.celltype[n] == 3:
-        
-        values += [s1.get_waveform_width(n)] # Plot in ms
+    values += [s1.get_waveform_width(n)] # Plot in ms
 
 f = plt.figure()
 plt.hist(values)
@@ -47,7 +51,6 @@ plt.axvline(0.35, color='grey', ls = '--')
 plt.axvline(0.45, color='grey', ls = '--')
 plt.ylabel('Number of neurons')
 plt.xlabel('Spike trough-to-peak (ms)')
-
 
 #%% Plot waveforms by cell type: FS and ppyr
 celltypes = [3,1] # FS and ppyr
@@ -61,36 +64,8 @@ for c in celltypes:
         plt.plot(np.arange(len(s1.get_single_waveform(n))),
                  s1.get_single_waveform(n),
                  color=color, alpha = 0.3)
-
-# plt.gca().axes.get_yaxis().set_visible(False)  # Method 1
-# plt.gca().axes.get_xaxis().set_visible(False)  # Method 1
-
-#%% Plot baseline spike rate vs spike width
-f = plt.figure()
-
-widths = []
-spkrt_baseline = []
-
-for n in range(s1.num_neurons):
-    
-    width = s1.get_waveform_width(n)
-    widths += [width]
-    all_stable_trials = [t for t in range(s1.num_trials) if t in s1.stable_trials[n]]
-    baseline = s1.get_spike_rate(n, (0.07, 0.57), all_stable_trials)
-    spkrt_baseline += baseline
-    
-    if width < 0.35:
-        plt.scatter(width, baseline, color='red')
-    elif width > 0.45:
-        plt.scatter(width, baseline, color='black')
-    else: 
-        plt.scatter(width, baseline, facecolors='none', edgecolors='brown')
-
-# plt.yscale('log')
-plt.ylabel('Spike rate, baseline (spks/s)')
-plt.xlabel('Spike trough-to-peak (ms)')
-
-
+        
+        
 #%% Get avg spk count for diff stim condition over cell types per neuron
 window = (0.570, 0.570 + 1.3 + 0.1)
 control_trials = np.where(s1.stim_ON == False)[0] 
@@ -167,6 +142,3 @@ ax[0].set_title('Cell type: FS')
 ax[1].set_title('Cell type: intermediate')
 ax[2].set_title('Cell type: ppyr')
 ax[3].set_title('Cell type: pDS')
-
-
-
