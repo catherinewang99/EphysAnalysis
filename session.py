@@ -310,7 +310,13 @@ class Session:
         # Peak channel is 165-246
         wf = self.waveform[neuron][0, 164:245] / np.linalg.norm(self.waveform[neuron][0, 164:245])
         return wf 
-
+    
+    def plot_mean_waveform(self, n):
+        
+        plt.plot(np.arange(len(self.get_single_waveform(n))),
+                 self.get_single_waveform(n))
+        
+    
     def plot_mean_waveform_by_celltype(self, both = True):
         """
         Plot waveforms by cell type
@@ -421,5 +427,61 @@ class Session:
             
         return np.mean(all_spk_rate)
     
+    
+    
     def get_PSTH(self ):
         return
+    
+    
+    
+    def plot_raster(self, neuron, window=(), trials=[], fig=None):
+        """
+        
+
+        Parameters
+        ----------
+        neuron : TYPE
+            DESCRIPTION.
+        trials : TYPE, optional
+            DESCRIPTION. The default is [].
+
+        Returns
+        -------
+        None.
+
+        """
+        if fig is None:
+            fig = plt.figure()
+            ax = fig.gca()
+        else:
+            ax = fig.gca()
+        if len(trials) == 0:
+            trials = self.stable_trials[neuron]
+            
+        for i in range(len(trials)):
+            
+            if len(window) == 0:
+                ax.scatter(self.spks[neuron][0, trials[i]], 
+                            np.ones(len(self.spks[neuron][0, trials[i]])) * i, 
+                            color='black', s=5)
+            else:
+                
+                start,stop = window
+                
+                spks = self.spks[neuron][0, trials[i]]
+                spks = [s for s in spks if s > start and s < stop]
+                
+                ax.scatter(spks,
+                            np.ones(len(spks)) * i,
+                            color='black', s=5)
+                
+        return fig
+        
+        
+        
+        
+        
+        
+        
+        
+        

@@ -20,6 +20,7 @@ plt.rcParams['pdf.fonttype'] = '42'
 import random
 from scipy import stats
 from statsmodels.stats.proportion import proportions_ztest
+from multisession import multiSession
 
 ## Paths
 allpaths = [
@@ -35,6 +36,8 @@ allpaths = [
 path = r'H:\ephys_data\CW47\python\2024_10_19'
 
 s1 = Session(path, passive=True, laser = 'red')
+
+# allsess = multiSession(allpaths, passive=True, laser = 'red')
 
 #%% Plot distribution of waveform withs
 

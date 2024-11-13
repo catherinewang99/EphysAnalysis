@@ -36,9 +36,9 @@ values = []
 # for n in s1.L_alm_idx:
 for n in range(s1.num_neurons):
     
-    if s1.celltype[n] == 3:# or s1.celltype[n] == 3:
-        
-        values += [s1.get_waveform_width(n)] # Plot in ms
+    # if s1.celltype[n] == 3:# or s1.celltype[n] == 3:
+    
+    values += [s1.get_waveform_width(n)] # Plot in ms
 
 f = plt.figure()
 plt.hist(values)
@@ -60,7 +60,7 @@ for c in celltypes:
         
         plt.plot(np.arange(len(s1.get_single_waveform(n))),
                  s1.get_single_waveform(n),
-                 color=color, alpha = 0.3)
+                 color=color, alpha = 0.2)
 
 # plt.gca().axes.get_yaxis().set_visible(False)  # Method 1
 # plt.gca().axes.get_xaxis().set_visible(False)  # Method 1
@@ -92,7 +92,7 @@ plt.xlabel('Spike trough-to-peak (ms)')
 
 
 #%% Get avg spk count for diff stim condition over cell types per neuron
-window = (0.570, 0.570 + 1.3 + 0.1)
+window = (0.570, 0.570 + 1.3)
 control_trials = np.where(s1.stim_ON == False)[0] 
 
 
@@ -101,7 +101,7 @@ f, ax = plt.subplots(1,len(set(s1.celltype)), figsize=(13,4))
 for j in range(len(set(s1.celltype))):
     neuron_cell_type = np.where(s1.celltype == j+1)[0]
     neuron_cell_type = [n for n in neuron_cell_type if n in s1.L_alm_idx]
-    
+    old_spk_rate = []
     for i in range(len(s1.all_stim_levels)): 
         level = s1.all_stim_levels[i]
         avg_spk_rate = []
@@ -110,12 +110,22 @@ for j in range(len(set(s1.celltype))):
             stim_trials = [c for c in stim_trials if c in s1.stable_trials[n]]
             
             baseline = s1.get_spike_rate(n, (0.07, 0.57), stim_trials)
+            if baseline < 1:
+                avg_spk_rate += [0]
+                continue
+            
             
             avg_spk_rate += [s1.get_spike_rate(n, window, stim_trials) / baseline]
 
-        ax[j].scatter(np.ones(len(avg_spk_rate)) * i, avg_spk_rate, alpha=0.5)
-        ax[j].set_yscale('log')
-    
+        ax[j].scatter(np.ones(len(avg_spk_rate)) * i, avg_spk_rate, alpha=0.5)            
+        # ax[j].plot
+        # ax[j].set_yscale('log')
+        ax[j].set_ylim(0,1.2)
+        if len(old_spk_rate) != 0:
+            for k in range(len(neuron_cell_type)):
+                ax[j].plot([i-1, i], [old_spk_rate[k], avg_spk_rate[k]], color='grey', alpha=0.2)        
+        old_spk_rate = avg_spk_rate
+
     ax[j].set_xticks(range(len(s1.all_stim_levels)), ['Ctl', '1.5', '3', '5', '10'])
 
 ax[0].set_xlabel('Stim power (mW)')
@@ -127,7 +137,7 @@ ax[3].set_title('Cell type: pDS')
 
 
 #%% Get avg spk count for diff stim condition over cell types population level
-window = (0.570, 0.570 + 1.3 + 0.1)
+window = (0.570, 0.570 + 1.3)
 control_trials = np.where(s1.stim_ON == False)[0] 
 
 
@@ -135,7 +145,7 @@ f, ax = plt.subplots(1,len(set(s1.celltype)), figsize=(13,4))
 
 for j in range(len(set(s1.celltype))):
     neuron_cell_type = np.where(s1.celltype == j+1)[0]
-    neuron_cell_type = [n for n in neuron_cell_type if n in s1.L_alm_idx]
+    neuron_cell_type = [n for n in neuron_cell_type if n in s1.R_alm_idx]
     
     allspkrt = []
     for i in range(len(s1.all_stim_levels)): 
@@ -147,6 +157,12 @@ for j in range(len(set(s1.celltype))):
             stim_trials = [c for c in stim_trials if c in s1.stable_trials[n]]
             
             baseline = s1.get_spike_rate(n, (0.07, 0.57), stim_trials)
+            if baseline < 1:
+                continue
+            
+            # if s1.get_spike_rate(n, window, stim_trials) / baseline < 5:
+            #     continue
+             
             
             avg_spk_rate += [s1.get_spike_rate(n, window, stim_trials)]
             allbaseline += [baseline]
@@ -168,5 +184,81 @@ ax[1].set_title('Cell type: intermediate')
 ax[2].set_title('Cell type: ppyr')
 ax[3].set_title('Cell type: pDS')
 
+#%% Proportion of significantly affected neurons
 
+#%% Phase locked stim analysis
 
+# Plot stim
+
+wavesurfer_trace = scio.loadmat(r'H:\ephys_data\CW47\wavesurfer_trace.mat')['ans'][0]
+# plt.plot(wavesurfer_trace)
+# plt.xlim(19390, 19900)
+x = np.arange(wavesurfer_trace.shape[0]) * 0.05 * 0.001 # convert to a seconds x axis
+plt.plot(x, wavesurfer_trace)
+# plt.xlim(0.57-0.005, 0.57+0.025)
+plt.xlim(0.57-0.005, 0.57+1.35)
+plt.xticks([0.57, 0.57+1.3])
+
+#%% Get the non supressed pyramidal cells at the highest stim condition
+window = (0.570, 0.570 + 1.3)
+
+neuron_cell_type = np.where(s1.celltype == 3)[0] # ppyr
+neuron_cell_type = [n for n in neuron_cell_type if n in s1.L_alm_idx]
+
+level = s1.all_stim_levels[-1]
+avg_spk_rate = []
+for n in neuron_cell_type:
+    stim_trials = np.where(s1.stim_level == level)[0]
+    stim_trials = [c for c in stim_trials if c in s1.stable_trials[n]]
+    
+    baseline = s1.get_spike_rate(n, (0.07, 0.57), stim_trials)
+    if baseline < 1:
+        avg_spk_rate += [0]
+        continue
+    
+    avg_spk_rate += [s1.get_spike_rate(n, window, stim_trials) / baseline]
+
+plt.scatter(range(len(avg_spk_rate)), avg_spk_rate)
+plt.show()
+plt.hist(avg_spk_rate)
+filt = [1 if i > 0.2 and i < 1 else 0 for i in avg_spk_rate ]
+idx = np.where(filt)
+# idx = np.where(np.array(avg_spk_rate) > 0.2 and np.array(avg_spk_rate) < 1)[0]
+# idx = [i for i in idx]
+# act_neurons = neuron_cell_type[np.array(idx)]
+
+#%% Look at rasters of significantly excited/inhibited units
+n=neuron_cell_type[0]
+
+# for stim_level in s1.all_stim_levels: 
+for stim_level in [s1.all_stim_levels[-1]]:
+    stim_trials = np.where(s1.stim_level == stim_level)[0]
+    stim_trials = [c for c in stim_trials if c in s1.stable_trials[n]]
+                
+    f = s1.plot_raster(n, window = (0.3, 0.5 + 1.8), trials=stim_trials)
+    ax = f.gca()
+    for x in np.arange(0.57+0.0125, 0.57+1.3125, 0.025): # Plot at the peak
+        ax.axvline(x, color='lightblue', linewidth=0.5)
+    ax.set_title('Stim power: {}'.format(stim_level))
+    
+    ax.set_xlim(0.57, 0.57+0.4)
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
