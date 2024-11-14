@@ -24,15 +24,16 @@ import os
 import statsmodels.api as sm
 from statsmodels.formula.api import ols
 import pandas as pd
+from scipy import stats
 from scipy.stats import mannwhitneyu
 from scipy.stats import mstats
 from scipy.ndimage import median_filter
 # from .LinRegpval import LinearRegression
 plt.rcParams['pdf.fonttype'] = 42 
-import time 
 import random
 from itertools import groupby
 from operator import itemgetter
+from scipy.signal import convolve
 
 class Session:
     """
@@ -374,6 +375,49 @@ class Session:
         
         
         # return counts
+    
+    def stim_effect_per_neuron(self, n, stimtrials, 
+                               p=0.01, passive=True, window=()):
+        """
+        Give the fraction change per neuron in spk rt and -1 if supressed 
+        significantly and 1 if excited significantly (0 otherwise)
+        
+        Return as a single neuron measure
+
+        Parameters
+        ----------
+        p : Int, optional
+            Significantly modulated neuron threshold. The default is 0.01.
+        
+        period : array, optional
+            Time frame to calculate effect of stim
+
+        Returns
+        -------
+        frac : int
+        neuron_sig : array of length corresponding to number of neurons, {0, 1, -1}
+
+        """
+
+        if len(window) == 0:
+            window = (0.57, 0.57+1.3) if passive else (0.57+1.3, 0.57+2.3)
+            
+        control_trials = np.where(~self.stim_ON)[0]
+        control_trials = [c for c in control_trials if c in self.stable_trials[n]]
+
+        ctl_counts = self.get_spike_count(n, window, control_trials)
+        stim_counts = self.get_spike_count(n, window, stimtrials)
+
+        tstat, p_val = stats.ttest_ind(stim_counts, ctl_counts)
+        
+        if p_val < p:
+            neuron_sig = 1 if tstat > 0 else -1
+        else:
+            neuron_sig = 0
+            
+        return neuron_sig
+
+
         
     def count_spikes(self, arr, window):
         """
@@ -396,6 +440,23 @@ class Session:
         count = np.sum((arr >= start) & (arr <= stop))
         return count
     
+    def get_spike_count(self, neuron, window, trials):
+        """
+        Get spike counts per trial for specific window for specific neuron
+        
+        """
+        all_spk_rate = []
+
+        start, stop = window
+        
+        trial_spks = self.spks[neuron][0, trials]
+        for arr in trial_spks:
+            count = self.count_spikes(arr, window)
+            all_spk_rate += [count]
+            
+        return all_spk_rate
+        
+        
     
     def get_spike_rate(self, neuron, window, trials):
         """
@@ -429,10 +490,54 @@ class Session:
     
     
     
-    def get_PSTH(self ):
-        return
+    def get_PSTH(self, neuron, trials, binsize=50, timestep=1, window=()):
+        """
+        
+        Return peristimulus time histogram of a given neuron over specific trials
+
+        Parameters
+        ----------
+        neuron : TYPE
+            DESCRIPTION.
+        trials : TYPE
+            DESCRIPTION.
+        binsize : TYPE, optional
+            DESCRIPTION. The default is 50.
+        timestep : TYPE, optional
+            DESCRIPTION. The default is 1.
+        window : TYPE, optional
+            DESCRIPTION. The default is ().
+
+        Returns:
+        - PSTH: array, convolved histogram of spike times
+        - time: array, time values corresponding to PSTH
+        """
+        timestep = timestep / 1000
+        start, stop = window if len(window) != 0 else (0, 0.57+1.3+3+3)
+        time = np.arange(start, stop, timestep)
+        
+        n_rep = len(trials)
+        total_counts = np.zeros_like(time)
+        
+        # Loop over each repetition
+        for i_rep in trials:
+            # Calculate histogram for each spike train
+            counts, _ = np.histogram(self.spks[neuron][0, i_rep], 
+                                     bins=np.arange(start, stop + timestep, timestep))
+            total_counts += counts / n_rep
+        
+        # Define window for convolution (smoothing)
+        window = np.ones(binsize) / (binsize / 1000)
+        
+        # Convolve histogram with smoothing window
+        PSTH = convolve(total_counts, window, mode='same')
     
-    
+        # Adjust time and PSTH to remove edge effects from convolution
+        time = time[binsize:-binsize]
+        PSTH = PSTH[binsize:-binsize]
+
+        return PSTH, time
+        
     
     def plot_raster(self, neuron, window=(), trials=[], fig=None):
         """
