@@ -336,7 +336,7 @@ for level in s1.all_stim_levels:
         stim_trials = np.where(s1.stim_level == level)[0]
         stim_trials = [c for c in stim_trials if c in s1.stable_trials[n]]
         
-        PSTH, time = s1.get_PSTH(n, stim_trials, window=window)
+        PSTH, time, _ = s1.get_PSTH(n, stim_trials, window=window)
         all_PSTH += [PSTH]
         
     plt.plot(time, np.mean(all_PSTH, axis=0), label=level)

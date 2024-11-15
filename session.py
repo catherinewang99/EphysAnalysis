@@ -96,6 +96,8 @@ class Session:
         
         self.data_type = 'ephys'
         self.sample = .570 # 570 ms offset for sample start
+        self.delay = 0.57 + 1.3
+        self.response = 0.57 + 1.3 + 3
         self.sampling_freq = 30000 # 30k for npxl 2.0
         
         # Behavior
@@ -513,7 +515,11 @@ class Session:
         - time: array, time values corresponding to PSTH
         """
         timestep = timestep / 1000
-        start, stop = window if len(window) != 0 else (0, 0.57+1.3+3+3)
+        if self.passive:
+            start, stop = window if len(window) != 0 else (-0.8, 0.57+1.3+1)
+        else:
+            start, stop = window if len(window) != 0 else (-0.8, 0.57+1.3+3+3)
+
         time = np.arange(start, stop, timestep)
         
         n_rep = len(trials)
@@ -524,19 +530,23 @@ class Session:
             # Calculate histogram for each spike train
             counts, _ = np.histogram(self.spks[neuron][0, i_rep], 
                                      bins=np.arange(start, stop + timestep, timestep))
-            total_counts += counts / n_rep
+            total_counts = np.vstack((total_counts, counts / n_rep))
+
+        stderr = np.std(total_counts[1:], axis=0) / np.sqrt(total_counts.shape[0])
         
         # Define window for convolution (smoothing)
         window = np.ones(binsize) / (binsize / 1000)
         
         # Convolve histogram with smoothing window
+        total_counts = np.sum(total_counts[1:], axis=0)
         PSTH = convolve(total_counts, window, mode='same')
     
         # Adjust time and PSTH to remove edge effects from convolution
         time = time[binsize:-binsize]
         PSTH = PSTH[binsize:-binsize]
-
-        return PSTH, time
+        stderr = stderr[binsize:-binsize]
+        
+        return PSTH, time, stderr
         
     
     def plot_raster(self, neuron, window=(), trials=[], fig=None):
@@ -583,10 +593,193 @@ class Session:
         return fig
         
         
+    def plot_raster_and_PSTH(self, neuron, window=(), opto=False,
+                             binsize=50, timestep=1, save=[]):
+        """
         
+        Plot raster and PSTH (top, bottom) for given neuron
+
+        Parameters
+        ----------
+        neuron : TYPE
+            DESCRIPTION.
+        window : TYPE, optional
+            DESCRIPTION. The default is ().
+        opto : TYPE, optional
+            DESCRIPTION. The default is False.
+
+        Returns
+        -------
+        None.
+
+        """
+        stable_trials = self.stable_trials[neuron]
+        L_correct_trials = np.where(self.L_correct)[0]
+        L_correct_trials = [i for i in L_correct_trials if not self.early_lick[i] and i in stable_trials]
+        R_correct_trials = np.where(self.R_correct)[0]
+        R_correct_trials = [i for i in R_correct_trials if not self.early_lick[i] and i in stable_trials]
         
+        if not opto:
+
+            title = "Neuron {}: Raster and PSTH".format(neuron)
+            
+            f, axarr = plt.subplots(2, sharex=True, figsize=(10,10))
+    
+            #RASTER:
+            for i in range(len(stable_trials)):
+                axarr[0].scatter(self.spks[neuron][0, stable_trials[i]], 
+                            np.ones(len(self.spks[neuron][0, stable_trials[i]])) * i, 
+                            color='black', s=5)
+                        
+            axarr[0].axis('off')
+
+            #TRACES:
+                
+            L_av, time, left_err = self.get_PSTH(neuron, L_correct_trials, 
+                                                 binsize=binsize, timestep=timestep)
+            R_av, _, right_err = self.get_PSTH(neuron, R_correct_trials,
+                                                  binsize=binsize, timestep=timestep)
+                
+            axarr[1].plot(time, L_av, 'r-')
+            axarr[1].plot(time, R_av, 'b-')
+            
+            
+            axarr[1].fill_between(time, L_av - left_err, 
+                     L_av + left_err,
+                     color=['#ffaeb1'])
+            axarr[1].fill_between(time, R_av - right_err, 
+                     R_av + right_err,
+                     color=['#b4b2dc'])
+            
+            axarr[0].axvline(self.sample, linestyle = '--', color='white')
+            axarr[0].axvline(self.delay, linestyle = '--', color='white')
+            axarr[0].axvline(self.response, linestyle = '--', color='white')
+            
         
+            axarr[1].axvline(self.sample, linestyle = '--', color='lightgrey')
+            axarr[1].axvline(self.delay, linestyle = '--', color='lightgrey')
+            axarr[1].axvline(self.response, linestyle = '--', color='lightgrey')
+            
+            axarr[0].set_title(title)
+            
+            axarr[1].set_ylabel('Spike rate (Hz)')
+            axarr[1].set_xlabel('Time (s)')
+            
+                        
+            if len(save) != 0:
+                plt.savefig(save)
+                
+            plt.show()
+            
+        else:
         
+            title = "Neuron {}: Control".format(neuron)
+            
+    
+            # f, axarr = plt.subplots(2,2, sharex='col', sharey = 'row')
+            f, axarr = plt.subplots(2,2, sharex='col', figsize=(10,6))
+            
+            #RASTER:
+            for i in range(len(stable_trials)):
+                axarr[0, 0].scatter(self.spks[neuron][0, stable_trials[i]], 
+                            np.ones(len(self.spks[neuron][0, stable_trials[i]])) * i, 
+                            color='black', s=1)
+                        
+            axarr[0, 0].axis('off')
+
+            #TRACES:
+                
+            L_av, time, left_err = self.get_PSTH(neuron, L_correct_trials, 
+                                                 binsize=binsize, timestep=timestep)
+            R_av, _, right_err = self.get_PSTH(neuron, R_correct_trials,
+                                                  binsize=binsize, timestep=timestep)
+
+            vmax = max(cat([R_av, L_av]))
+
+            axarr[1,0].plot(time, L_av, 'r-')
+            axarr[1,0].plot(time, R_av, 'b-')
+            
+            
+            axarr[1,0].fill_between(time, L_av - left_err, 
+                     L_av + left_err,
+                     color=['#ffaeb1'])
+            axarr[1,0].fill_between(time, R_av - right_err, 
+                     R_av + right_err,
+                     color=['#b4b2dc'])
+            
+            axarr[0,0].axvline(self.sample, linestyle = '--', color='white')
+            axarr[0,0].axvline(self.delay, linestyle = '--', color='white')
+            axarr[0,0].axvline(self.response, linestyle = '--', color='white')
+            
         
+            axarr[1,0].axvline(self.sample, linestyle = '--', color='lightgrey')
+            axarr[1,0].axvline(self.delay, linestyle = '--', color='lightgrey')
+            axarr[1,0].axvline(self.response, linestyle = '--', color='lightgrey')
+            
+            
+            axarr[1,0].set_ylabel('Spike rate (Hz)')
+            axarr[1,0].set_xlabel('Time (s)')
+            
+            axarr[0,0].set_title(title)
+            
+            #OPTO:
+            title = "Neuron {}: Opto".format(neuron)
+
+    
+            L_opto_trials = self.trial_type_direction('l')
+            L_opto_trials = [i for i in L_correct_trials if self.stim_ON[i] and i in stable_trials]
+            R_opto_trials = self.trial_type_direction('r')
+            R_opto_trials = [i for i in R_correct_trials if not self.stim_ON[i] and i in stable_trials]
+            
+            stable_opto_trials = [s for s in stable_trials if self.stim_ON[s]]
+            
+            for i in range(len(stable_opto_trials)):
+                axarr[0, 1].scatter(self.spks[neuron][0, stable_opto_trials[i]], 
+                            np.ones(len(self.spks[neuron][0, stable_opto_trials[i]])) * i, 
+                            color='black', s=1)
+                        
+            axarr[0, 1].axis('off')
+            
+            L_av, time, left_err = self.get_PSTH(neuron, L_opto_trials, 
+                                                 binsize=binsize, timestep=timestep)
+            R_av, _, right_err = self.get_PSTH(neuron, R_opto_trials,
+                                                  binsize=binsize, timestep=timestep)
+
+            vmax_opto = max(cat([R_av, L_av]))
+
+            axarr[1,1].plot(time, L_av, 'r-')
+            axarr[1,1].plot(time, R_av, 'b-')
+            
+            
+            axarr[1,1].fill_between(time, L_av - left_err, 
+                     L_av + left_err,
+                     color=['#ffaeb1'])
+            axarr[1,1].fill_between(time, R_av - right_err, 
+                     R_av + right_err,
+                     color=['#b4b2dc'])
+            
+            axarr[0,1].axvline(self.sample, linestyle = '--', color='white')
+            axarr[0,1].axvline(self.delay, linestyle = '--', color='white')
+            axarr[0,1].axvline(self.response, linestyle = '--', color='white')
+            
         
+            axarr[1,1].axvline(self.sample, linestyle = '--', color='lightgrey')
+            axarr[1,1].axvline(self.delay, linestyle = '--', color='lightgrey')
+            axarr[1,1].axvline(self.response, linestyle = '--', color='lightgrey')
+            
+            if vmax > vmax_opto:
+                axarr[1, 1].sharey(axarr[1, 0])  # Make Bottom-Right share y-axis with Bottom-Left
+                axarr[1, 1].hlines(y=vmax, xmin=self.delay, xmax=self.delay + 1, linewidth=10, color='lightblue')
+            else:
+                axarr[1, 0].sharey(axarr[1, 1])  # Make Bottom-Right share y-axis with Bottom-Left
+                axarr[1, 1].hlines(y=vmax_opto, xmin=self.delay, xmax=self.delay + 1, linewidth=10, color='lightblue')
+
+            axarr[0,1].set_title(title)
+
+            plt.tight_layout()
+            
+            if len(save) != 0:
+                plt.savefig(save)
+            plt.show()
+            
         
