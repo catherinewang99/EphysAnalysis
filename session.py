@@ -84,6 +84,16 @@ class Session:
         self.celltype = units['celltype'][0] # Shape: (units,)
         
         self.num_neurons = units['units'].shape[1]
+        self.good_neurons = np.arange(self.num_neurons)
+        
+        if side == 'L':
+            self.num_neurons = len(self.L_alm_idx)
+            self.good_neurons = self.L_alm_idx
+        elif side == 'R':
+            self.num_neurons = len(self.R_alm_idx)
+            self.good_neurons = self.R_alm_idx
+
+        
         self.num_trials = units['units'][0,0].shape[1]
         
         self.spks = units['units'][0] # Shape: (units,)(1, trials)
@@ -516,9 +526,9 @@ class Session:
         """
         timestep = timestep / 1000
         if self.passive:
-            start, stop = window if len(window) != 0 else (-0.8, 0.57+1.3+1)
+            start, stop = window if len(window) != 0 else (-0.2, 0.57+1.3+1)
         else:
-            start, stop = window if len(window) != 0 else (-0.8, 0.57+1.3+3+3)
+            start, stop = window if len(window) != 0 else (-0.2, 0.57+1.3+3+3)
 
         time = np.arange(start, stop, timestep)
         
@@ -547,6 +557,8 @@ class Session:
         stderr = stderr[binsize:-binsize]
         
         return PSTH, time, stderr
+    
+    ### SIMPLE PLOTTING FUNCTIONS ###
         
     
     def plot_raster(self, neuron, window=(), trials=[], fig=None):
@@ -614,10 +626,10 @@ class Session:
 
         """
         stable_trials = self.stable_trials[neuron]
-        L_correct_trials = np.where(self.L_correct)[0]
-        L_correct_trials = [i for i in L_correct_trials if not self.early_lick[i] and i in stable_trials]
-        R_correct_trials = np.where(self.R_correct)[0]
-        R_correct_trials = [i for i in R_correct_trials if not self.early_lick[i] and i in stable_trials]
+        L_correct_trials = self.lick_correct_direction('l')
+        L_correct_trials = [i for i in L_correct_trials if not self.stim_ON[i] and i in stable_trials]
+        R_correct_trials = self.lick_correct_direction('r')
+        R_correct_trials = [i for i in R_correct_trials if not self.stim_ON[i] and i in stable_trials]
         
         if not opto:
 
@@ -626,10 +638,18 @@ class Session:
             f, axarr = plt.subplots(2, sharex=True, figsize=(10,10))
     
             #RASTER:
-            for i in range(len(stable_trials)):
-                axarr[0].scatter(self.spks[neuron][0, stable_trials[i]], 
-                            np.ones(len(self.spks[neuron][0, stable_trials[i]])) * i, 
-                            color='black', s=5)
+            counter = 0
+            for i in R_correct_trials:
+                axarr[0].scatter(self.spks[neuron][0, i], 
+                            np.ones(len(self.spks[neuron][0, i])) * counter, 
+                            color='blue', s=5)
+                counter += 1
+            for i in L_correct_trials:
+                axarr[0].scatter(self.spks[neuron][0, i], 
+                            np.ones(len(self.spks[neuron][0, i])) * counter, 
+                            color='red', s=5)
+                counter += 1
+
                         
             axarr[0].axis('off')
 
@@ -680,10 +700,19 @@ class Session:
             f, axarr = plt.subplots(2,2, sharex='col', figsize=(10,6))
             
             #RASTER:
-            for i in range(len(stable_trials)):
-                axarr[0, 0].scatter(self.spks[neuron][0, stable_trials[i]], 
-                            np.ones(len(self.spks[neuron][0, stable_trials[i]])) * i, 
-                            color='black', s=1)
+            counter = 0
+            for i in R_correct_trials:
+                axarr[0, 0].scatter(self.spks[neuron][0, i], 
+                            np.ones(len(self.spks[neuron][0, i])) * counter, 
+                            color='blue', s=5)
+                counter += 1
+            for i in L_correct_trials:
+                axarr[0, 0].scatter(self.spks[neuron][0, i], 
+                            np.ones(len(self.spks[neuron][0, i])) * counter, 
+                            color='red', s=5)
+                counter += 1
+
+
                         
             axarr[0, 0].axis('off')
 
@@ -727,16 +756,23 @@ class Session:
 
     
             L_opto_trials = self.trial_type_direction('l')
-            L_opto_trials = [i for i in L_correct_trials if self.stim_ON[i] and i in stable_trials]
+            L_opto_trials = [i for i in L_opto_trials if self.stim_ON[i] and i in stable_trials]
             R_opto_trials = self.trial_type_direction('r')
-            R_opto_trials = [i for i in R_correct_trials if not self.stim_ON[i] and i in stable_trials]
+            R_opto_trials = [i for i in R_opto_trials if not self.stim_ON[i] and i in stable_trials]
             
             stable_opto_trials = [s for s in stable_trials if self.stim_ON[s]]
             
-            for i in range(len(stable_opto_trials)):
-                axarr[0, 1].scatter(self.spks[neuron][0, stable_opto_trials[i]], 
-                            np.ones(len(self.spks[neuron][0, stable_opto_trials[i]])) * i, 
-                            color='black', s=1)
+            counter = 0
+            for i in R_opto_trials:
+                axarr[0, 1].scatter(self.spks[neuron][0, i], 
+                            np.ones(len(self.spks[neuron][0, i])) * counter, 
+                            color='blue', s=5)
+                counter += 1
+            for i in L_opto_trials:
+                axarr[0, 1].scatter(self.spks[neuron][0, i], 
+                            np.ones(len(self.spks[neuron][0, i])) * counter, 
+                            color='red', s=5)
+                counter += 1
                         
             axarr[0, 1].axis('off')
             
@@ -782,4 +818,506 @@ class Session:
                 plt.savefig(save)
             plt.show()
             
+    ## ANALYSIS FUNCTIONS 
+    
+    def get_epoch_selective(self, epoch, p = 0.0001, lickdir=False, return_stat=False):
+        """Identifies neurons that are selective in a given epoch
+        
+        Saves neuron list in self.selective_neurons as well.
+        
+        Parameters
+        ----------
+        epoch : tuple
+            start, stop timepoints to evaluate selectivity
+        p : int, optional
+            P-value cutoff to be deemed selectivity (default 0.0001)
+        bias : bool, optional
+            If true, only use the bias trials to evaluate (default False)
+        rtrials, ltrials: list, optional
+            If provided, use these trials to evaluate selectivty
+        return_stat : bool, optional
+            If true, returns the t-statistic to use for ranking
+        lickdir : bool, optional
+            If True, use the lick direction instaed of correct only
+            
+        Returns
+        -------
+        list
+            List of neurons that are selective
+        list, optional
+            T-statistic associated with neuron, positive if left selective, 
+            negative if right selective
+        """
+        
+        selective_neurons = []
+        all_tstat = []
+        
+        rtrials=self.lick_correct_direction('r') if not lickdir else self.lick_actual_direction('r')
+        ltrials=self.lick_correct_direction('l') if not lickdir else self.lick_actual_direction('l')
+
+        for neuron in self.good_neurons: # Only look at non-noise neurons
+            
+            stable_trials = self.stable_trials[neuron]
+
+            rtrials = [i for i in rtrials if not self.stim_ON[i] and i in stable_trials]
+            ltrials = [i for i in ltrials if not self.stim_ON[i] and i in stable_trials]
+
+            right = self.get_spike_count(neuron, epoch, rtrials)
+            left = self.get_spike_count(neuron, epoch, ltrials)
+
+            tstat, p_val = stats.ttest_ind(left, right)
+            # p = 0.01/self.num_neurons
+            # p = 0.01
+            # p = 0.0001
+            if p_val < p:
+                selective_neurons += [neuron]
+                all_tstat += [tstat] # Positive if L selective, negative if R selective
+
+        self.selective_neurons = selective_neurons
+        
+        if return_stat:
+            return selective_neurons, all_tstat
+        
+        return selective_neurons
+        
+    ## OLD EPHYS PLOTS UNEDITED
+    
+    def plot_number_of_sig_neurons(self, window = 200, return_nums=False, save=False, y_axis = []):
+        
+        """Plots number of contra / ipsi neurons over course of trial
+                                
+        Parameters
+        ----------
+        return_nums : bool, optional
+            return number of contra ispi neurons to do an aggregate plot
+        
+        save : bool, optional
+            Whether to save fig to file (default False)
+            
+        y_axis : list, optional
+            set top and bottom ylim
+        """
+        
+
+        # x = np.arange(-6.97,6,self.fs)[:self.time_cutoff]
+        x = np.arange(0, 8.5, window/1000)
+        steps = np.arange(len(x))
+        contra = np.zeros(len(steps))
+        ipsi = np.zeros(len(steps))
+
+        for n in self.good_neurons:
+            
+            stable_trials = self.stable_trials[n]
+            
+            L_correct_trials = self.lick_correct_direction('l')
+            L_correct_trials = [i for i in L_correct_trials if not self.stim_ON[i] and i in stable_trials]
+            R_correct_trials = self.lick_correct_direction('r')
+            R_correct_trials = [i for i in R_correct_trials if not self.stim_ON[i] and i in stable_trials]
+            
+            for t in steps:
+                
+                r = self.get_spike_count(n, (x[t], x[t]+window/1000), R_correct_trials)
+                l = self.get_spike_count(n, (x[t], x[t]+window/1000), L_correct_trials)
+                
+                t_val, p = stats.ttest_ind(r, l)
+                p = p < 0.01
+                
+                if self.unit_side[n] == 'L':
+                    if t_val > 0: # R > L
+                        contra[t] += p
+                    else:
+                        ipsi[t] += p
+                else:
+                    if t_val > 0: # R > L
+                        ipsi[t] += p
+                    else:
+                        contra[t] += p
+
+        
+        if return_nums:
+            return contra, ipsi
+
+        plt.bar(x, contra, color = 'b', edgecolor = 'white', width = window/1000, label = 'contra')
+        plt.bar(x, -ipsi, color = 'r',edgecolor = 'white', width = window/1000, label = 'ipsi')
+        plt.axvline(self.sample, ls = '--', color='grey')
+        plt.axvline(self.delay, ls = '--', color='grey')
+        plt.axvline(self.response, ls = '--', color='grey')
+
+        if len(y_axis) != 0:
+            plt.ylim(bottom = y_axis[0])
+            plt.ylim(top = y_axis[1])
+        plt.ylabel('Number of sig sel neurons')
+        plt.xlabel('Time from Go cue (s)')
+        plt.legend()
+        
+        if save:
+            plt.savefig(self.path + r'number_sig_neurons.pdf')
+        
+        plt.show()
+        
+    def selectivity_table_by_epoch(self, save=False):
+        """Plots table of L/R traces of selective neurons over three epochs and contra/ipsi population proportions
+                                
+        Parameters
+        ----------
+        save : bool, optional
+            Whether to save fig to file (default False)
+        """
+
+        f, axarr = plt.subplots(4,3, sharex='col', figsize=(14, 12))
+        epochs = [range(self.time_cutoff), range(self.sample, self.delay), range(self.delay, self.response), range(self.response, self.time_cutoff)]
+
+        x = np.arange(-5.97,6,self.fs)[:self.time_cutoff]
+        if 'CW03' in self.path:
+            x = np.arange(-6.97,6,self.fs)[:self.time_cutoff]
+
+        titles = ['Whole-trial', 'Sample', 'Delay', 'Response']
+        
+        for i in range(4):
+            
+            contra_neurons, ipsi_neurons, contra_trace, ipsi_trace = self.contra_ipsi_pop(epochs[i])
+
+            # Bar plot
+            contraratio = len(contra_neurons)/len(self.selective_neurons) if len(self.selective_neurons) > 0 else 0
+            ipsiratio = len(ipsi_neurons)/len(self.selective_neurons) if len(self.selective_neurons) > 0 else 0
+            
+            axarr[i, 0].bar(['Contra', 'Ipsi'], [contraratio, ipsiratio], 
+                            color = ['b', 'r'])
+            
+            axarr[i, 0].set_ylim(0,1)
+            axarr[i, 0].set_title(titles[i])
+            
+            if len(ipsi_neurons) != 0:
+            
+                overall_R, overall_L = ipsi_trace['r'], ipsi_trace['l']
+                overall_R = [np.mean(overall_R[r], axis=0) for r in range(len(overall_R))]
+                overall_L = [np.mean(overall_L[l], axis=0) for l in range(len(overall_L))]
+                
+                R_av = np.mean(overall_R, axis = 0) 
+                L_av = np.mean(overall_L, axis = 0)
+                
+                left_err = np.std(overall_L, axis=0) / np.sqrt(len(overall_L)) 
+                right_err = np.std(overall_R, axis=0) / np.sqrt(len(overall_R))
+                            
+                # if 'CW03' in self.path:
+                #     L_av = L_av[5:]
+                #     R_av = R_av[5:]
+                #     left_err = left_err[5:]
+                #     right_err = right_err[5:]
+                    
+                    
+                axarr[i, 2].plot(x, L_av, 'r-')
+                axarr[i, 2].plot(x, R_av, 'b-')
+                        
+                axarr[i, 2].fill_between(x, L_av - left_err, 
+                         L_av + left_err,
+                         color=['#ffaeb1'])
+                axarr[i, 2].fill_between(x, R_av - right_err, 
+                         R_av + right_err,
+                         color=['#b4b2dc'])
+                axarr[i, 2].set_title("Ipsi-preferring neurons")
+            
+            else:
+                print('No ipsi selective neurons')
+        
+            if len(contra_neurons) != 0:
+    
+                overall_R, overall_L = contra_trace['r'], contra_trace['l']
+                overall_R = [np.mean(overall_R[r], axis=0) for r in range(len(overall_R))]
+                overall_L = [np.mean(overall_L[l], axis=0) for l in range(len(overall_L))]
+                
+                R_av = np.mean(overall_R, axis = 0) 
+                L_av = np.mean(overall_L, axis = 0)
+                
+                left_err = np.std(overall_L, axis=0) / np.sqrt(len(overall_L)) 
+                right_err = np.std(overall_R, axis=0) / np.sqrt(len(overall_R))
+                            
+                # if 'CW03' in self.path:
+                #     L_av = L_av[5:]
+                #     R_av = R_av[5:]
+                #     left_err = left_err[5:]
+                #     right_err = right_err[5:]
+                    
+                axarr[i, 1].plot(x, L_av, 'r-')
+                axarr[i, 1].plot(x, R_av, 'b-')
+                        
+                axarr[i, 1].fill_between(x, L_av - left_err, 
+                          L_av + left_err,
+                          color=['#ffaeb1'])
+                axarr[i, 1].fill_between(x, R_av - right_err, 
+                          R_av + right_err,
+                          color=['#b4b2dc'])
+                axarr[i, 1].set_title("Contra-preferring neurons")
+
+            else:
+                print('No contra selective neurons')
+                
+        axarr[0,0].set_ylabel('Proportion of neurons')
+        axarr[0,1].set_ylabel('dF/F0')
+        axarr[3,1].set_xlabel('Time from Go cue (s)')
+        axarr[3,2].set_xlabel('Time from Go cue (s)')
+        
+        if save:
+            plt.savefig(self.path + r'contra_ipsi_SDR_table.png')
+        
+        plt.show()
+
+    def plot_three_selectivity(self,save=False):
+        """Plots selectivity traces over three epochs and number of neurons in each population
+                                
+        Parameters
+        ----------
+        save : bool, optional
+            Whether to save fig to file (default False)
+        """
+        
+        f, axarr = plt.subplots(1,5, sharex='col', figsize=(21,5))
+        
+        epochs = [range(self.time_cutoff), range(8,14), range(19,28), range(29,self.time_cutoff)]
+        x = np.arange(-5.97,4,self.fs)[:self.time_cutoff]
+        titles = ['Whole-trial', 'Sample', 'Delay', 'Response']
+        
+        num_epochs = []
+        
+        for i in range(4):
+            
+            contra_neurons, ipsi_neurons, contra_trace, ipsi_trace = self.contra_ipsi_pop(epochs[i])
+            
+            if len(contra_neurons) == 0:
+                
+                nonpref, pref = ipsi_trace['r'], ipsi_trace['l']
+                
+            elif len(ipsi_neurons) == 0:
+                nonpref, pref = contra_trace['l'], contra_trace['r']
+
+            else:
+                nonpref, pref = cat((ipsi_trace['r'], contra_trace['l'])), cat((ipsi_trace['l'], contra_trace['r']))
+                
+                
+            sel = np.mean(pref, axis = 0) - np.mean(nonpref, axis = 0)
+            
+            err = np.std(pref, axis=0) / np.sqrt(len(pref)) 
+            err += np.std(nonpref, axis=0) / np.sqrt(len(nonpref))
+                        
+            axarr[i + 1].plot(x, sel, 'b-')
+                    
+            axarr[i + 1].fill_between(x, sel - err, 
+                      sel + err,
+                      color=['#b4b2dc'])
+
+            axarr[i + 1].set_title(titles[i])
+            
+            num_epochs += [len(contra_neurons) + len(ipsi_neurons)]
+
+        # Bar plot
+        axarr[0].bar(['S', 'D', 'R'], np.array(num_epochs[1:]) / sum(num_epochs[1:]), color = ['dimgray', 'darkgray', 'gainsboro'])
+        
+        axarr[0].set_ylim(0,1)
+        axarr[0].set_title('Among all ALM neurons')
+        
+        axarr[0].set_ylabel('Proportion of neurons')
+        axarr[1].set_ylabel('Selectivity')
+        axarr[2].set_xlabel('Time from Go cue (s)')
+        
+        
+        plt.show()
+        
+    def population_sel_timecourse(self, save=False):
+        """Plots selectivity traces over three periods and number of neurons in each population
+                                
+        Parameters
+        ----------
+        save : bool, optional
+            Whether to save fig to file (default False)
+        """
+        
+        f, axarr = plt.subplots(2, 1, sharex='col', figsize=(20,15))
+        epochs = [range(14,28), range(21,self.time_cutoff), range(29,self.time_cutoff)]
+        x = np.arange(-5.97,4,self.fs)[:self.time_cutoff]
+        titles = ['Preparatory', 'Prep + response', 'Response']
+        
+        sig_n = dict()
+        sig_n['c'] = []
+        sig_n['i'] = []
+        contra_mat = np.zeros(self.time_cutoff)
+        ipsi_mat = np.zeros(self.time_cutoff)
+        
+        for i in range(3):
+            
+            # contra_neurons, ipsi_neurons, contra_trace, ipsi_trace = self.contra_ipsi_pop(epochs[i])
+            
+            for n in self.get_epoch_selective(epochs[i]):
+                                
+                r, l = self.get_trace_matrix(n)
+                r, l = np.array(r), np.array(l)
+                side = 'c' if np.mean(r[:, epochs[i]]) > np.mean(l[:,epochs[i]]) else 'i'
+                
+                r, l = np.mean(r,axis=0), np.mean(l,axis=0)
+                
+                if side == 'c' and n not in sig_n['c']:
+                    
+                    sig_n['c'] += [n]
+    
+                    contra_mat = np.vstack((contra_mat, r - l))
+
+                if side == 'i' and n not in sig_n['i']:
+                    
+                    sig_n['i'] += [n]
+
+                    ipsi_mat = np.vstack((ipsi_mat, l - r))
+
+        axarr[0].matshow((ipsi_mat[1:]), aspect="auto", cmap='jet')
+        axarr[0].set_title('Ipsi-preferring neurons')
+        
+        axarr[1].matshow(-(contra_mat[1:]), aspect="auto", cmap='jet')
+        axarr[1].set_title('Contra-preferring neurons')
+        
+        if save:
+            plt.savefig(self.path + r'population_selectivity_overtime.jpg')
+        
+        plt.show()
+   
+    def plot_selectivity(self, neuron_num, plot=True, epoch=[], opto=False, 
+                             downsample=False, bootstrap = False, trialtype = False,
+                             lickdir=False, return_pref_np = False):
+            
+            """Plots a single line representing selectivity of given neuron over all trials
+            
+            Evaluates the selectivity using preference in delay epoch
+            
+            Parameters
+            ----------
+            neuron_num : int
+                Neuron to plot
+            plot : bool, optional
+                Whether to plot or not (default True)
+            epoch : list, optional
+                Timesteps to evaluate preference and selectivity over (default empty list)
+                
+            Returns
+            -------
+            list
+                Selectivity calculated and plotted
+            """
+            if len(epoch) == 0:
+                epoch = range(self.delay, self.response)
+            
+            R, L = self.get_trace_matrix(neuron_num)
+            pref, l, r = self.screen_preference(neuron_num, epoch, 
+                                                bootstrap=bootstrap,
+                                                return_remove=False)
+            if bootstrap:
+                R, L = self.get_trace_matrix(neuron_num, lickdir=lickdir, trialtype=trialtype)
+                left_trace, right_trace = L, R
+            else:
+                
+                R, L = self.get_trace_matrix(neuron_num, lickdir=lickdir, trialtype=trialtype)
+                # left_trace = [L[i] for i in l]
+                # right_trace = [R[i] for i in r]
+    
+            if pref: # prefers left
+                sel = np.mean(left_trace, axis = 0) - np.mean(right_trace, axis=0)
+                pref = np.mean(left_trace, axis = 0)
+                nonpref = np.mean(right_trace, axis=0)
+    
+                if opto: 
+                    right_trace, left_trace = self.get_trace_matrix(neuron_num, opto=True)
+                    sel = np.mean(left_trace, axis = 0) - np.mean(right_trace, axis=0)
+            else:
+                sel = np.mean(right_trace, axis = 0) - np.mean(left_trace, axis=0)
+                pref = np.mean(right_trace, axis = 0)
+                nonpref = np.mean(left_trace, axis=0)
+                if opto: 
+                    right_trace, left_trace = self.get_trace_matrix(neuron_num, opto=True)
+                    sel = np.mean(right_trace, axis = 0) - np.mean(left_trace, axis=0)
+                    
+            if plot:
+                direction = 'Left' if pref else 'Right'
+                plt.plot(range(self.time_cutoff), sel, 'b-')
+                plt.axhline(y=0)
+                plt.title('Selectivity of neuron {}: {} selective'.format(neuron_num, direction))
+                plt.show()
+            
+    
+            if return_pref_np:
+                if downsample or 'CW04' in self.path:
+                    return self.dodownsample([pref]), self.dodownsample([nonpref])
+                else:
+                    return pref, nonpref
+    
+            if downsample or 'CW04' in self.path:
+                return self.dodownsample([sel])
+            else:
+                return sel
+    
+    ## OPTO SELECTIVITY PLOTS
+    
+    
+    def selectivity_optogenetics(self, save=False, p = 0.0001, lickdir = False, 
+                                 return_traces = False, exclude_unselective=False,
+                                 fix_axis = [], selective_neurons = [], downsample=False,
+                                 bootstrap=False):
+        """Plots overall selectivity trace across opto vs control trials
+        
+        Uses late delay epoch to calculate selectivity
+                                
+        Parameters
+        ----------
+        save : bool, optional
+            Whether to save fig to file (default False)
+        p : int, optional
+            P-value to use in the selectivity calculations
+        fix_axis : tuple, optional
+            Provide top and bottom limits for yaxis
+
+        selective_neurons : list, optional        
+            List of selective neurons to plot from
+        """
+        
+
+
+        # x = np.arange(-5.97,4,self.fs)[:self.time_cutoff] if 'CW03' not in self.path else np.arange(-6.97,4,self.fs)[:self.time_cutoff]
+        x = np.arange(-6.97,4,self.fs)[:self.time_cutoff]
+        # Late delay selective neurons
+        delay_neurons = self.get_epoch_selective(range(self.response-int(1*(1/self.fs)), self.response), p=p)
+        # delay_neurons = self.get_epoch_selective(range(self.delay, self.response), p=p)
+        control_sel = []
+        opto_sel = []
+                      
+        if len(delay_neurons) == 0:
+            return None, None
+        for n in delay_neurons:
+            # L_pref, screenl, screenr = self.screen_preference(n, range(self.delay, self.response), bootstrap=bootstrap)
+            L_pref, screenl, screenr = self.screen_preference(n, range(self.response-int(1*(1/self.fs)), self.response), bootstrap=bootstrap)
+            all_exclude_trials = cat((screenl, screenr)) if not bootstrap else []
+            if L_pref:
+                nonpref, pref = self.get_trace_matrix(n, lickdir=lickdir, trialtype=True, remove_trial=all_exclude_trials)
+                optonp, optop = self.get_trace_matrix(n, opto=True, both=False, lickdir=lickdir, remove_trial=all_exclude_trials)
+            else:
+                pref, nonpref = self.get_trace_matrix(n, lickdir=lickdir, trialtype=True, remove_trial=all_exclude_trials)
+                optop, optonp = self.get_trace_matrix(n, opto=True, both=False, lickdir=lickdir, remove_trial=all_exclude_trials)
+                
+            
+            control_sel += [np.mean(pref, axis=0)-np.mean(nonpref,axis=0)]
+            opto_sel += [np.mean(optop, axis=0)-np.mean(optonp, axis=0)]
+            
+        if exclude_unselective:
+            keep_n = [c for c in range(len(control_sel)) if np.mean(np.array(control_sel[c])[range(self.response-int(1.5*(1/self.fs)), self.response)]) > 0.3]
+            control_sel = np.array(control_sel)[keep_n]
+            opto_sel = np.array(opto_sel)[keep_n]
+            
+        sel = np.mean(control_sel, axis=0)
+        selo = np.mean(opto_sel, axis=0)
+
+        err = np.std(control_sel, axis=0) / np.sqrt(len(delay_neurons))
+        erro = np.std(opto_sel, axis=0) / np.sqrt(len(delay_neurons))
+        
+        if return_traces:
+            
+            if downsample:
+
+                control_sel, opto_sel = self.dodownsample(control_sel), self.dodownsample(opto_sel)
+                
+            return control_sel, opto_sel
+        
         
