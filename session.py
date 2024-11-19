@@ -108,6 +108,13 @@ class Session:
         self.sample = .570 # 570 ms offset for sample start
         self.delay = 0.57 + 1.3
         self.response = 0.57 + 1.3 + 3
+        self.time_cutoff = self.response+3
+        if passive:
+            self.sample = .570 # 570 ms offset for sample start
+            self.delay = 0.57 + 1.3
+            self.response = 0.57 + 1.3 + 1
+            self.time_cutoff = self.response+1
+            
         self.sampling_freq = 30000 # 30k for npxl 2.0
         
         # Behavior
@@ -526,9 +533,9 @@ class Session:
         """
         timestep = timestep / 1000
         if self.passive:
-            start, stop = window if len(window) != 0 else (-0.2, 0.57+1.3+1)
+            start, stop = window if len(window) != 0 else (-0.2, self.time_cutoff)
         else:
-            start, stop = window if len(window) != 0 else (-0.2, 0.57+1.3+3+3)
+            start, stop = window if len(window) != 0 else (-0.2, self.time_cutoff)
 
         time = np.arange(start, stop, timestep)
         
@@ -879,6 +886,91 @@ class Session:
             return selective_neurons, all_tstat
         
         return selective_neurons
+    
+    
+    def screen_preference(self, neuron_num, epoch, bootstrap=False, samplesize = 25, 
+                          lickdir=False, return_remove=False):
+        """Determine if a neuron is left or right preferring
+                
+        Iterate 30 times over different test batches to get a high confidence
+        estimation of neuron preference.
+        
+        Parameters
+        ----------
+        neuron_num : int
+            Neuron to screen in function
+        epoch : list
+            Timesteps over which to evaluate the preference
+        samplesize : int, optional
+            Number of trials to use in the test batch (default 10)
+        return_remove : bool, optional
+            Return trials to mreove (train trials)
+            
+        Returns
+        -------
+        choice : bool
+            True if left preferring, False if right preferring
+        l_trials, r_trials : list
+            All left and right trials        
+        """
+        # Input: neuron of interest
+        # Output: (+) if left pref, (-) if right pref, then indices of trials to plot
+        
+        # All trials where the mouse licked left or right AND non stim
+      
+        if lickdir:
+            r_trials = self.lick_actual_direction('r')
+            l_trials = self.lick_actual_direction('l')
+        else:
+            r_trials = self.lick_correct_direction('r')
+            l_trials = self.lick_correct_direction('l')
+            
+        r_trials = [i for i in r_trials if not self.stim_ON[i] and i in self.stable_trials[neuron_num]]
+        l_trials = [i for i in l_trials if not self.stim_ON[i] and i in self.stable_trials[neuron_num]]
+        
+        # Skip neuron if less than 15
+        if len(l_trials) < samplesize or len(r_trials) < samplesize:
+            print("There are fewer than 15 trials R/L: {} R trials and {} L trials".format(len(l_trials), len(r_trials)))
+            samplesize = 5
+        
+        if bootstrap:
+            pref = 0
+            for _ in range(30): # Perform 30 times
+                # Pick 20 random trials as screen for left and right
+                screen_l = np.random.choice(l_trials, size = samplesize, replace = False)
+                screen_r = np.random.choice(r_trials, size = samplesize, replace = False)
+                
+                # Compare late delay epoch for preference
+                avg_r = np.mean(self.get_spike_count(neuron_num, epoch, screen_r))
+                avg_l = np.mean(self.get_spike_count(neuron_num, epoch, screen_l))
+              
+                pref += avg_l > avg_r
+                
+            choice = True if pref/30 > 0.5 else False
+
+            return choice, l_trials, r_trials
+            
+            
+        # Pick 20 random trials as screen for left and right
+        screen_l = np.random.choice(l_trials, size = samplesize, replace = False)
+        screen_r = np.random.choice(r_trials, size = samplesize, replace = False)
+    
+        # Remainder of trials are left for plotting in left and right separately
+        test_l = [t for t in l_trials if t not in screen_l]
+        test_r = [t for t in r_trials if t not in screen_r]
+        
+        # Compare late delay epoch for preference
+        avg_r = np.mean(self.get_spike_count(neuron_num, epoch, screen_r))
+        avg_l = np.mean(self.get_spike_count(neuron_num, epoch, screen_l))
+
+        if return_remove:
+
+            return avg_l > avg_r, screen_l, screen_r
+
+        return avg_l > avg_r, test_l, test_r
+
+        
+        
         
     ## OLD EPHYS PLOTS UNEDITED
     
@@ -1255,8 +1347,10 @@ class Session:
     
     def selectivity_optogenetics(self, save=False, p = 0.0001, lickdir = False, 
                                  return_traces = False, exclude_unselective=False,
+                                 binsize=50, timestep=1,
                                  fix_axis = [], selective_neurons = [], downsample=False,
                                  bootstrap=False):
+        
         """Plots overall selectivity trace across opto vs control trials
         
         Uses late delay epoch to calculate selectivity
@@ -1276,33 +1370,58 @@ class Session:
         
 
 
-        # x = np.arange(-5.97,4,self.fs)[:self.time_cutoff] if 'CW03' not in self.path else np.arange(-6.97,4,self.fs)[:self.time_cutoff]
-        x = np.arange(-6.97,4,self.fs)[:self.time_cutoff]
+        # x = np.arange(-6.97,4,self.fs)[:self.time_cutoff]
+        
+        epoch = (self.response-1.5, self.response) # Late delay
+        
         # Late delay selective neurons
-        delay_neurons = self.get_epoch_selective(range(self.response-int(1*(1/self.fs)), self.response), p=p)
-        # delay_neurons = self.get_epoch_selective(range(self.delay, self.response), p=p)
+        delay_neurons = self.get_epoch_selective(epoch, p=p)
+
         control_sel = []
         opto_sel = []
                       
-        if len(delay_neurons) == 0:
+        if len(delay_neurons) == 0: # No selective neurons
             return None, None
+        
         for n in delay_neurons:
-            # L_pref, screenl, screenr = self.screen_preference(n, range(self.delay, self.response), bootstrap=bootstrap)
-            L_pref, screenl, screenr = self.screen_preference(n, range(self.response-int(1*(1/self.fs)), self.response), bootstrap=bootstrap)
-            all_exclude_trials = cat((screenl, screenr)) if not bootstrap else []
-            if L_pref:
-                nonpref, pref = self.get_trace_matrix(n, lickdir=lickdir, trialtype=True, remove_trial=all_exclude_trials)
-                optonp, optop = self.get_trace_matrix(n, opto=True, both=False, lickdir=lickdir, remove_trial=all_exclude_trials)
-            else:
-                pref, nonpref = self.get_trace_matrix(n, lickdir=lickdir, trialtype=True, remove_trial=all_exclude_trials)
-                optop, optonp = self.get_trace_matrix(n, opto=True, both=False, lickdir=lickdir, remove_trial=all_exclude_trials)
-                
+
+            L_pref, screenl, screenr = self.screen_preference(n, epoch, bootstrap=bootstrap)
             
-            control_sel += [np.mean(pref, axis=0)-np.mean(nonpref,axis=0)]
-            opto_sel += [np.mean(optop, axis=0)-np.mean(optonp, axis=0)]
+            l_control_trials = self.trial_type_direction('l') if not lickdir else self.lick_actual_direction('l')            
+            r_control_trials = self.trial_type_direction('r') if not lickdir else self.lick_actual_direction('r')
+            
+            l_opto_trials = [i for i in l_control_trials if i in self.stable_trials[n] and self.stim_ON[i]]
+            r_opto_trials = [i for i in r_control_trials if i in self.stable_trials[n] and self.stim_ON[i]]
+            
+            l_control_trials = [i for i in l_control_trials if i in self.stable_trials[n] and not self.stim_ON[i]]
+            r_control_trials = [i for i in r_control_trials if i in self.stable_trials[n] and not self.stim_ON[i]]    
+            
+            if bootstrap:
+                all_exclude_trials = cat((screenl, screenr))
+                l_opto_trials = [i for i in l_opto_trials if i not in all_exclude_trials]
+                r_opto_trials = [i for i in r_opto_trials if i not in all_exclude_trials]
+                l_control_trials = [i for i in l_control_trials if i not in all_exclude_trials]
+                r_control_trials = [i for i in r_control_trials if i not in all_exclude_trials]
+
+        
+            if L_pref:
+                pref, time,_ = self.get_PSTH(n, l_control_trials, binsize=binsize, timestep=timestep)
+                nonpref,_,_ = self.get_PSTH(n, r_control_trials, binsize=binsize, timestep=timestep)
+                optop,_,_ = self.get_PSTH(n, l_opto_trials, binsize=binsize, timestep=timestep)
+                optonp,_,_ = self.get_PSTH(n, r_opto_trials, binsize=binsize, timestep=timestep)
+                
+            else:
+                pref, time,_ = self.get_PSTH(n, r_control_trials, binsize=binsize, timestep=timestep)
+                nonpref,_,_ = self.get_PSTH(n, l_control_trials, binsize=binsize, timestep=timestep)
+                optop,_,_ = self.get_PSTH(n, r_opto_trials, binsize=binsize, timestep=timestep)
+                optonp,_,_ = self.get_PSTH(n, l_opto_trials, binsize=binsize, timestep=timestep)
+            
+            control_sel += [pref-nonpref]
+            opto_sel += [optop-optonp]
             
         if exclude_unselective:
-            keep_n = [c for c in range(len(control_sel)) if np.mean(np.array(control_sel[c])[range(self.response-int(1.5*(1/self.fs)), self.response)]) > 0.3]
+            time_steps = np.where((time >= self.delay+1.5) & (time <= self.response))
+            keep_n = [c for c in range(len(control_sel)) if np.mean(np.array(control_sel[c])[time_steps]) > 3] # Spike rate diff FIXME
             control_sel = np.array(control_sel)[keep_n]
             opto_sel = np.array(opto_sel)[keep_n]
             
@@ -1313,11 +1432,7 @@ class Session:
         erro = np.std(opto_sel, axis=0) / np.sqrt(len(delay_neurons))
         
         if return_traces:
-            
-            if downsample:
 
-                control_sel, opto_sel = self.dodownsample(control_sel), self.dodownsample(opto_sel)
-                
             return control_sel, opto_sel
         
         

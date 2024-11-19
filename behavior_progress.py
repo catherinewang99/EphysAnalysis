@@ -17,11 +17,11 @@ cat = np.concatenate
 plt.rcParams['pdf.fonttype'] = '42' 
 
 #%% Plot learning progression
-b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW48\python_behavior', behavior_only=True)
-b.learning_progression(window = 50)
+# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW48\python_behavior', behavior_only=True)
+# b.learning_progression(window = 50)
 
 b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW49\python_behavior', behavior_only=True)
 b.learning_progression(window = 50)
 
-b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW52\python_behavior', behavior_only=True)
-b.learning_progression(window = 50)
+# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW52\python_behavior', behavior_only=True)
+# b.learning_progression(window = 50)
