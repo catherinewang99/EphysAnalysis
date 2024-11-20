@@ -124,10 +124,7 @@ for j = 1:length(lst)
             % Galvo x info
 
             if max(wave_xGalvo_tmp) < 0.1
-                xGalvo(i_solo_trial,:) = min(wave_xGalvo_tmp);
-            else
-                xGalvo(i_solo_trial,:) = max(wave_xGalvo_tmp);
-            end
+                xGalvoHistory
 
             % Lick information
                         
@@ -137,9 +134,9 @@ for j = 1:length(lst)
 
 
         
-        save([path 'python\' strjoin(namesplit(2:4), '_') '\behavior.mat'], 'R_hit_tmp', 'R_miss_tmp', 'R_ignore_tmp', 'L_hit_tmp', 'L_miss_tmp', 'L_ignore_tmp', 'LickEarly_tmp', 'i_good_trials', 'StimDur_tmp', 'StimLevel', 'xGalvo')
+        save([path 'python\' strjoin(namesplit(2:4), '_') '\behavior.mat'], 'R_hit_tmp', 'R_miss_tmp', 'R_ignore_tmp', 'L_hit_tmp', 'L_miss_tmp', 'L_ignore_tmp', 'LickEarly_tmp', 'i_good_trials', 'StimDur_tmp', 'StimLevel')
         
-        clearvars AOM_data_tmp StimDur_tmp StimOnTime_tmp StimLevel xGalvo
+        clearvars AOM_data_tmp StimDur_tmp StimOnTime_tmp StimLevel
 
     end
 end

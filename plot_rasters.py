@@ -20,3 +20,4 @@ path = r'H:\ephys_data\CW47\python\2024_10_17'
 s1 = Session(path, passive=False, side='L')
 # s1.plot_raster_and_PSTH(132, opto=True)
 s1.plot_number_of_sig_neurons(window=100)
+

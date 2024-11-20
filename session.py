@@ -153,6 +153,9 @@ class Session:
         if 'StimLevel' in behavior.keys():
             self.stim_level = cat(behavior['StimLevel'])
             self.all_stim_levels = sorted(list(set(self.stim_level)))
+            
+            x_galvo = cat(behavior['xGalvo'])
+            self.stim_side = np.where(x_galvo < 0, 'L', 'R')
         
         # Re-adjust with i good trials
         self.stim_trials = np.where(self.stim_ON)[0]
@@ -1351,7 +1354,7 @@ class Session:
                                  fix_axis = [], selective_neurons = [], downsample=False,
                                  bootstrap=False):
         
-        """Plots overall selectivity trace across opto vs control trials
+        """Returns overall selectivity trace across opto vs control trials
         
         Uses late delay epoch to calculate selectivity
                                 
@@ -1378,9 +1381,11 @@ class Session:
         delay_neurons = self.get_epoch_selective(epoch, p=p)
 
         control_sel = []
-        opto_sel = []
+        opto_sel_stim_left = []
+        opto_sel_stim_right = []
                       
         if len(delay_neurons) == 0: # No selective neurons
+            print('No selective neurons')
             return None, None
         
         for n in delay_neurons:
@@ -1390,49 +1395,64 @@ class Session:
             l_control_trials = self.trial_type_direction('l') if not lickdir else self.lick_actual_direction('l')            
             r_control_trials = self.trial_type_direction('r') if not lickdir else self.lick_actual_direction('r')
             
+            if bootstrap:
+                all_exclude_trials = cat((screenl, screenr))
+                l_control_trials = [i for i in l_control_trials if i not in all_exclude_trials]
+                r_control_trials = [i for i in r_control_trials if i not in all_exclude_trials]
+                
             l_opto_trials = [i for i in l_control_trials if i in self.stable_trials[n] and self.stim_ON[i]]
             r_opto_trials = [i for i in r_control_trials if i in self.stable_trials[n] and self.stim_ON[i]]
+            
+            l_opto_trials_stim_left = [i for i in l_opto_trials if self.stim_side[i] == 'L']
+            r_opto_trials_stim_left = [i for i in r_opto_trials if self.stim_side[i] == 'L']
+            
+            l_opto_trials_stim_right = [i for i in l_opto_trials if self.stim_side[i] == 'R'] 
+            r_opto_trials_stim_right = [i for i in r_opto_trials if self.stim_side[i] == 'R'] 
             
             l_control_trials = [i for i in l_control_trials if i in self.stable_trials[n] and not self.stim_ON[i]]
             r_control_trials = [i for i in r_control_trials if i in self.stable_trials[n] and not self.stim_ON[i]]    
             
-            if bootstrap:
-                all_exclude_trials = cat((screenl, screenr))
-                l_opto_trials = [i for i in l_opto_trials if i not in all_exclude_trials]
-                r_opto_trials = [i for i in r_opto_trials if i not in all_exclude_trials]
-                l_control_trials = [i for i in l_control_trials if i not in all_exclude_trials]
-                r_control_trials = [i for i in r_control_trials if i not in all_exclude_trials]
 
         
             if L_pref:
                 pref, time,_ = self.get_PSTH(n, l_control_trials, binsize=binsize, timestep=timestep)
                 nonpref,_,_ = self.get_PSTH(n, r_control_trials, binsize=binsize, timestep=timestep)
-                optop,_,_ = self.get_PSTH(n, l_opto_trials, binsize=binsize, timestep=timestep)
-                optonp,_,_ = self.get_PSTH(n, r_opto_trials, binsize=binsize, timestep=timestep)
+                optop_stim_left,_,_ = self.get_PSTH(n, l_opto_trials_stim_left, binsize=binsize, timestep=timestep)
+                optonp_stim_left,_,_ = self.get_PSTH(n, r_opto_trials_stim_left, binsize=binsize, timestep=timestep)
+                optop_stim_right,_,_ = self.get_PSTH(n, l_opto_trials_stim_right, binsize=binsize, timestep=timestep)
+                optonp_stim_right,_,_ = self.get_PSTH(n, r_opto_trials_stim_right, binsize=binsize, timestep=timestep)
                 
             else:
                 pref, time,_ = self.get_PSTH(n, r_control_trials, binsize=binsize, timestep=timestep)
                 nonpref,_,_ = self.get_PSTH(n, l_control_trials, binsize=binsize, timestep=timestep)
-                optop,_,_ = self.get_PSTH(n, r_opto_trials, binsize=binsize, timestep=timestep)
-                optonp,_,_ = self.get_PSTH(n, l_opto_trials, binsize=binsize, timestep=timestep)
-            
+                optop_stim_left,_,_ = self.get_PSTH(n, r_opto_trials_stim_left, binsize=binsize, timestep=timestep)
+                optonp_stim_left,_,_ = self.get_PSTH(n, l_opto_trials_stim_left, binsize=binsize, timestep=timestep)
+                optop_stim_right,_,_ = self.get_PSTH(n, r_opto_trials_stim_right, binsize=binsize, timestep=timestep)
+                optonp_stim_right,_,_ = self.get_PSTH(n, l_opto_trials_stim_right, binsize=binsize, timestep=timestep)
+                
             control_sel += [pref-nonpref]
-            opto_sel += [optop-optonp]
+            opto_sel_stim_left += [optop_stim_left-optonp_stim_left]
+            opto_sel_stim_right += [optop_stim_right-optonp_stim_right]
             
         if exclude_unselective:
             time_steps = np.where((time >= self.delay+1.5) & (time <= self.response))
             keep_n = [c for c in range(len(control_sel)) if np.mean(np.array(control_sel[c])[time_steps]) > 3] # Spike rate diff FIXME
             control_sel = np.array(control_sel)[keep_n]
-            opto_sel = np.array(opto_sel)[keep_n]
+            opto_sel_stim_left = np.array(opto_sel_stim_left)[keep_n]
+            opto_sel_stim_right = np.array(opto_sel_stim_right)[keep_n]
             
         sel = np.mean(control_sel, axis=0)
-        selo = np.mean(opto_sel, axis=0)
+        selo_stimleft = np.mean(opto_sel_stim_left, axis=0)
+        selo_stimright = np.mean(opto_sel_stim_right, axis=0)
 
         err = np.std(control_sel, axis=0) / np.sqrt(len(delay_neurons))
-        erro = np.std(opto_sel, axis=0) / np.sqrt(len(delay_neurons))
+        erro_stimleft = np.std(opto_sel_stim_left, axis=0) / np.sqrt(len(delay_neurons))
+        erro_stimright = np.std(opto_sel_stim_right, axis=0) / np.sqrt(len(delay_neurons))
+        
+        return sel, selo_stimleft, selo_stimright, err, erro_stimleft, erro_stimright, time
         
         if return_traces:
 
-            return control_sel, opto_sel
+            return sel, selo_stimleft, selo_stimright, err, erro_stimleft, erro_stimright, time
         
         
