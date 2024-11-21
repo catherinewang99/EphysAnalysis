@@ -616,7 +616,8 @@ class Session:
         
         
     def plot_raster_and_PSTH(self, neuron, window=(), opto=False,
-                             binsize=50, timestep=1, save=[]):
+                             binsize=50, timestep=1, stimside = 'both',
+                             save=[]):
         """
         
         Plot raster and PSTH (top, bottom) for given neuron
@@ -701,12 +702,10 @@ class Session:
                 
             plt.show()
             
-        else:
+        elif opto and stimside != "both":
         
             title = "Neuron {}: Control".format(neuron)
             
-    
-            # f, axarr = plt.subplots(2,2, sharex='col', sharey = 'row')
             f, axarr = plt.subplots(2,2, sharex='col', figsize=(10,6))
             
             #RASTER:
@@ -768,9 +767,10 @@ class Session:
             L_opto_trials = self.trial_type_direction('l')
             L_opto_trials = [i for i in L_opto_trials if self.stim_ON[i] and i in stable_trials]
             R_opto_trials = self.trial_type_direction('r')
-            R_opto_trials = [i for i in R_opto_trials if not self.stim_ON[i] and i in stable_trials]
-            
-            stable_opto_trials = [s for s in stable_trials if self.stim_ON[s]]
+            R_opto_trials = [i for i in R_opto_trials if self.stim_ON[i] and i in stable_trials]
+                        
+            L_opto_trials = [i for i in L_opto_trials if self.stim_side[i] == stimside]
+            R_opto_trials = [i for i in R_opto_trials if self.stim_side[i] == stimside]
             
             counter = 0
             for i in R_opto_trials:
@@ -827,6 +827,9 @@ class Session:
             if len(save) != 0:
                 plt.savefig(save)
             plt.show()
+        else:
+            
+            print("Both side opto plot not implemented yet!")
             
     ## ANALYSIS FUNCTIONS 
     

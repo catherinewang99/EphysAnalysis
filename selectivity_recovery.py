@@ -16,11 +16,11 @@ import behavior
 cat = np.concatenate
 plt.rcParams['pdf.fonttype'] = '42' 
 
-path = r'H:\ephys_data\CW47\python\2024_10_17'
+path = r'H:\ephys_data\CW47\python\2024_10_24'
 
-s1 = Session(path, passive=False, side='L')
+s1 = Session(path, passive=False, side='R')
 
-sel, selo_stimleft, selo_stimright, err, erro_stimleft, erro_stimright, time = s1.selectivity_optogenetics(p=0.05, binsize=150)
+sel, selo_stimleft, selo_stimright, err, erro_stimleft, erro_stimright, time = s1.selectivity_optogenetics(p=0.05, binsize=200)
 
 
 f, axarr = plt.subplots(1,2, sharey='row', figsize=(10,5))  
@@ -52,7 +52,8 @@ for i in range(2):
     axarr[i].axvline(s1.response, color = 'grey', alpha=0.5, ls = '--')
     axarr[i].axhline(0, color = 'grey', alpha=0.5, ls = '--')
 
-axarr[0].set_title('Optogenetic effect on selectivity') # (n = {} neurons)'.format(num_neurons))                  
+axarr[0].set_title('Left stim') # (n = {} neurons)'.format(num_neurons))                  
+axarr[1].set_title('Right stim') # (n = {} neurons)'.format(num_neurons))                  
 axarr[0].set_xlabel('Time from Go cue (s)')
 axarr[0].set_ylabel('Selectivity')
 

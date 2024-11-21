@@ -17,7 +17,12 @@ plt.rcParams['pdf.fonttype'] = '42'
 
 path = r'H:\ephys_data\CW47\python\2024_10_17'
 
-s1 = Session(path, passive=False, side='L')
-# s1.plot_raster_and_PSTH(132, opto=True)
-s1.plot_number_of_sig_neurons(window=100)
+s1 = Session(path, passive=False, side='R')
+#%%
+s1.plot_raster_and_PSTH(215, opto=True, stimside='R', binsize=75, timestep=5)
+# s1.plot_number_of_sig_neurons(window=100)
+
+for i in range(10,250,35):
+    s1.plot_raster_and_PSTH(i, opto=False, stimside='R', binsize=75, timestep=5)
+
 
