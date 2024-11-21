@@ -82,6 +82,9 @@ class Session:
         self.R_alm_idx = np.where(imec == 1)[1]
         
         self.celltype = units['celltype'][0] # Shape: (units,)
+        self.fs_idx = np.where(self.celltype == 3)[0]
+        self.pyr_idx = np.where(self.celltype == 1)[0]
+        
         
         self.num_neurons = units['units'].shape[1]
         self.good_neurons = np.arange(self.num_neurons)
@@ -93,6 +96,7 @@ class Session:
             self.num_neurons = len(self.R_alm_idx)
             self.good_neurons = self.R_alm_idx
 
+        self.side = side
         
         self.num_trials = units['units'][0,0].shape[1]
         
@@ -1047,6 +1051,7 @@ class Session:
         plt.ylabel('Number of sig sel neurons')
         plt.xlabel('Time from Go cue (s)')
         plt.legend()
+        plt.title('{} ALM neurons'.format(self.side))
         
         if save:
             plt.savefig(self.path + r'number_sig_neurons.pdf')
