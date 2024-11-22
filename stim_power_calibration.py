@@ -98,6 +98,8 @@ control_trials = np.where(s1.stim_ON == False)[0]
 
 f, ax = plt.subplots(1,len(set(s1.celltype)), figsize=(13,4))
 
+FS_ppyr_idx = []
+
 for j in range(len(set(s1.celltype))):
     neuron_cell_type = np.where(s1.celltype == j+1)[0]
     neuron_cell_type = [n for n in neuron_cell_type if n in s1.L_alm_idx]
@@ -113,18 +115,23 @@ for j in range(len(set(s1.celltype))):
             if baseline < 1:
                 avg_spk_rate += [0]
                 continue
-            
+            if j == 2 and i == 4 and s1.get_spike_rate(n, window, stim_trials) / baseline > 2:
+                FS_ppyr_idx += [n]                
+
             
             avg_spk_rate += [s1.get_spike_rate(n, window, stim_trials) / baseline]
 
         ax[j].scatter(np.ones(len(avg_spk_rate)) * i, avg_spk_rate, alpha=0.5)            
         # ax[j].plot
         # ax[j].set_yscale('log')
-        ax[j].set_ylim(0,1.2)
+        # ax[j].set_ylim(0,1.2)
         if len(old_spk_rate) != 0:
             for k in range(len(neuron_cell_type)):
                 ax[j].plot([i-1, i], [old_spk_rate[k], avg_spk_rate[k]], color='grey', alpha=0.2)        
         old_spk_rate = avg_spk_rate
+        
+            
+            
 
     ax[j].set_xticks(range(len(s1.all_stim_levels)), ['Ctl', '1.5', '3', '5', '10'])
 
@@ -135,6 +142,34 @@ ax[1].set_title('Cell type: intermediate')
 ax[2].set_title('Cell type: ppyr')
 ax[3].set_title('Cell type: pDS')
 
+
+#%% Plot the waveforms of the ppyr cells that get excited by blue light but are ppyr
+celltypes = [3,1] # FS and ppyr
+
+f = plt.figure(dpi=300)
+
+for c in celltypes:
+    neuron_cell_type = np.where(s1.celltype == c)[0]
+    for n in neuron_cell_type:
+        if n in FS_ppyr_idx:
+            color='green'
+            alpha=1
+            continue
+        else:
+            color = 'red' if c == 1 else 'black'
+            alpha=0.2
+        plt.plot(np.arange(len(s1.get_single_waveform(n))),
+                 s1.get_single_waveform(n),
+                 color=color, alpha = alpha)
+for n in FS_ppyr_idx:
+    color='green'
+    alpha=1
+    plt.plot(np.arange(len(s1.get_single_waveform(n))),
+         s1.get_single_waveform(n),
+         color=color, alpha = alpha)
+        
+plt.gca().axes.get_yaxis().set_visible(False)  # Method 1
+plt.gca().axes.get_xaxis().set_visible(False)  # Method 1
 
 #%% Get avg spk count for diff stim condition over cell types population level
 window = (0.570, 0.570 + 1.3)
@@ -305,6 +340,8 @@ plt.show()
 # # idx = np.where(np.array(avg_spk_rate) > 0.2 and np.array(avg_spk_rate) < 1)[0]
 # # idx = [i for i in idx]
 # # act_neurons = neuron_cell_type[np.array(idx)]
+
+
 
 #%% Look at rasters of significantly excited/inhibited units
 n=neuron_cell_type[0]

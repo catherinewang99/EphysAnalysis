@@ -157,9 +157,9 @@ class Session:
         if 'StimLevel' in behavior.keys():
             self.stim_level = cat(behavior['StimLevel'])
             self.all_stim_levels = sorted(list(set(self.stim_level)))
-            
-            x_galvo = cat(behavior['xGalvo'])
-            self.stim_side = np.where(x_galvo < 0, 'L', 'R')
+            if not passive:
+                x_galvo = cat(behavior['xGalvo'])
+                self.stim_side = np.where(x_galvo < 0, 'L', 'R')
         
         # Re-adjust with i good trials
         self.stim_trials = np.where(self.stim_ON)[0]
