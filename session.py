@@ -82,8 +82,8 @@ class Session:
         self.R_alm_idx = np.where(imec == 1)[1]
         
         self.celltype = units['celltype'][0] # Shape: (units,)
-        self.fs_idx = np.where(self.celltype == 3)[0]
-        self.pyr_idx = np.where(self.celltype == 1)[0]
+        self.fs_idx = np.where(self.celltype == 1)[0]
+        self.pyr_idx = np.where(self.celltype == 3)[0]
         
         
         self.num_neurons = units['units'].shape[1]

@@ -16,6 +16,7 @@ cat = np.concatenate
 plt.rcParams['pdf.fonttype'] = '42' 
 
 path = r'H:\ephys_data\CW47\python\2024_10_25'
+path = r'J:\ephys_data\CW48\python\2024_10_30'
 
 s1 = Session(path, passive=False)#, side='R')
 #%%
