@@ -19,24 +19,25 @@ plt.rcParams['pdf.fonttype'] = '42'
 
 path = r'H:\ephys_data\CW47\python\2024_10_17'
 
-# paths = [r'H:\ephys_data\CW47\python\2024_10_17',
-#           r'H:\ephys_data\CW47\python\2024_10_20',
-#           r'H:\ephys_data\CW47\python\2024_10_21',
-#           r'H:\ephys_data\CW47\python\2024_10_22',
-#           r'H:\ephys_data\CW47\python\2024_10_24',
-#           r'H:\ephys_data\CW47\python\2024_10_25',
-#           ]
-
-paths = [
-        r'J:\ephys_data\CW48\python\2024_10_29',
-        r'J:\ephys_data\CW48\python\2024_10_30',
-        r'J:\ephys_data\CW48\python\2024_10_31',
-        r'J:\ephys_data\CW48\python\2024_11_01',
-        r'J:\ephys_data\CW48\python\2024_11_02',
-        r'J:\ephys_data\CW48\python\2024_11_03',
-        r'J:\ephys_data\CW48\python\2024_11_04',
-        r'J:\ephys_data\CW48\python\2024_11_05',
+paths = [r'H:\ephys_data\CW47\python\2024_10_17',
+          r'H:\ephys_data\CW47\python\2024_10_20',
+          r'H:\ephys_data\CW47\python\2024_10_21',
+          r'H:\ephys_data\CW47\python\2024_10_22',
+          r'H:\ephys_data\CW47\python\2024_10_24',
+          r'H:\ephys_data\CW47\python\2024_10_25',
           ]
+
+# paths = [
+#         r'J:\ephys_data\CW48\python\2024_10_29',
+#         r'J:\ephys_data\CW48\python\2024_10_30',
+#         r'J:\ephys_data\CW48\python\2024_10_31',
+#         r'J:\ephys_data\CW48\python\2024_11_01',
+#         r'J:\ephys_data\CW48\python\2024_11_02',
+#         r'J:\ephys_data\CW48\python\2024_11_03',
+#         r'J:\ephys_data\CW48\python\2024_11_04',
+#         r'J:\ephys_data\CW48\python\2024_11_05',
+#         r'J:\ephys_data\CW48\python\2024_11_06',
+#           ]
 
 
 numl, numr = [],[]
