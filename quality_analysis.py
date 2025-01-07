@@ -20,25 +20,37 @@ plt.rcParams['pdf.fonttype'] = '42'
 path = r'H:\ephys_data\CW47\python\2024_10_17'
 
 paths = [r'H:\ephys_data\CW47\python\2024_10_17',
+          r'H:\ephys_data\CW47\python\2024_10_18',
+          # r'H:\ephys_data\CW47\python\2024_10_19',
           r'H:\ephys_data\CW47\python\2024_10_20',
           r'H:\ephys_data\CW47\python\2024_10_21',
           r'H:\ephys_data\CW47\python\2024_10_22',
+          # r'H:\ephys_data\CW47\python\2024_10_23',
           r'H:\ephys_data\CW47\python\2024_10_24',
           r'H:\ephys_data\CW47\python\2024_10_25',
           ]
 
-# paths = [
-#         r'J:\ephys_data\CW48\python\2024_10_29',
-#         r'J:\ephys_data\CW48\python\2024_10_30',
-#         r'J:\ephys_data\CW48\python\2024_10_31',
-#         r'J:\ephys_data\CW48\python\2024_11_01',
-#         r'J:\ephys_data\CW48\python\2024_11_02',
-#         r'J:\ephys_data\CW48\python\2024_11_03',
-#         r'J:\ephys_data\CW48\python\2024_11_04',
-#         r'J:\ephys_data\CW48\python\2024_11_05',
-#         r'J:\ephys_data\CW48\python\2024_11_06',
-#           ]
+paths = [
+        r'J:\ephys_data\CW48\python\2024_10_29',
+        r'J:\ephys_data\CW48\python\2024_10_30',
+        r'J:\ephys_data\CW48\python\2024_10_31',
+        r'J:\ephys_data\CW48\python\2024_11_01',
+        r'J:\ephys_data\CW48\python\2024_11_02',
+        r'J:\ephys_data\CW48\python\2024_11_03',
+        r'J:\ephys_data\CW48\python\2024_11_04',
+        r'J:\ephys_data\CW48\python\2024_11_05',
+        r'J:\ephys_data\CW48\python\2024_11_06',
+          ]
 
+paths = [
+        r'J:\ephys_data\CW49\python\2024_12_11',
+        r'J:\ephys_data\CW49\python\2024_12_12',
+        r'J:\ephys_data\CW49\python\2024_12_13',
+        r'J:\ephys_data\CW49\python\2024_12_14',
+        r'J:\ephys_data\CW49\python\2024_12_15',
+        r'J:\ephys_data\CW49\python\2024_12_16',
+
+          ]
 
 numl, numr = [],[]
 samplel, sampler = [],[]
@@ -67,8 +79,9 @@ for path in paths:
 ## Plot nums
 
 f = plt.figure()
-plt.plot(range(len(paths)), numl, color='blue', marker='o', label='Left ALM')
-plt.plot(range(len(paths)), numr, color='red', marker='o', label='Right ALM')
+plt.plot(range(len(paths)), numl, color='red', marker='o', label='Left ALM')
+plt.plot(range(len(paths)), numr, color='blue', marker='o', label='Right ALM')
+# plt.plot([0,2,3,4,5,6], np.array(numr)[[0,2,3,4,5,6]], color='blue', marker='o', label='Right ALM')
 plt.xticks(np.arange(len(paths)), np.arange(len(paths)) + 1)
 plt.xlabel('Day of recording')
 plt.ylabel('Number of neurons')

@@ -15,6 +15,10 @@ import session
 import behavior
 cat = np.concatenate
 plt.rcParams['pdf.fonttype'] = '42' 
+sys.path.append("C:\scripts\Ephys analysis\ephys_pipeline")
+
+from session import Session
+
 
 #%% Plot learning progression
 # b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW48\python_behavior', behavior_only=True)
@@ -25,3 +29,84 @@ b.learning_progression(window = 50)
 
 # b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW52\python_behavior', behavior_only=True)
 # b.learning_progression(window = 50)
+
+#%% Plot behavior effect to stim
+
+paths = [
+            # r'J:\ephys_data\CW49\python\2024_12_11',
+            # r'J:\ephys_data\CW49\python\2024_12_12',
+            r'J:\ephys_data\CW49\python\2024_12_13',
+            r'J:\ephys_data\CW49\python\2024_12_14',
+            r'J:\ephys_data\CW49\python\2024_12_15',
+            r'J:\ephys_data\CW49\python\2024_12_16',
+        
+        ]
+
+performance_opto_left, performance_opto_right = [], []
+performance_ctl = []
+fig = plt.figure()
+
+for path in paths:
+    s1 = Session(path, passive=False)
+    all_stim_trials = np.where(s1.stim_ON)[0]
+    left_stim_trials = [i for i in np.where(s1.stim_side == 'L')[0] if i in all_stim_trials]
+    right_stim_trials = [i for i in np.where(s1.stim_side == 'R')[0] if i in all_stim_trials]
+    control_trials = np.where(~s1.stim_ON)[0]
+    
+    perf_right, perf_left, perf_all = s1.performance_in_trials(left_stim_trials)
+    performance_opto_left += [perf_all]
+
+    perf_rightctl, perf_leftctl, perf_all = s1.performance_in_trials(control_trials)
+    performance_ctl += [perf_all]
+  
+    plt.plot([0 - 0.2, 0 + 0.2], [perf_rightctl, perf_right], color='blue', alpha=0.3)
+    plt.plot([0 - 0.2, 0 + 0.2], [perf_leftctl, perf_left], color='red', alpha=0.3)
+    plt.scatter(0 - 0.2, perf_rightctl, c='b', marker='o')
+    plt.scatter(0 - 0.2, perf_leftctl, c='r', marker='o')
+    # plt.scatter(0 - 0.2, perf_all, facecolors='white', edgecolors='black')
+    plt.scatter(0 + 0.2, perf_right, c='b', marker='o')
+    plt.scatter(0 + 0.2, perf_left, c='r', marker='o')
+    
+    perf_right, perf_left, perf_all = s1.performance_in_trials(right_stim_trials)
+    performance_opto_right += [perf_all]
+    
+    plt.plot([1 - 0.2, 1 + 0.2], [perf_rightctl, perf_right], color='blue', alpha=0.3)
+    plt.plot([1 - 0.2, 1 + 0.2], [perf_leftctl, perf_left], color='red', alpha=0.3)
+    plt.scatter(1 - 0.2, perf_rightctl, c='b', marker='o')
+    plt.scatter(1 - 0.2, perf_leftctl, c='r', marker='o')
+    # plt.scatter(0 - 0.2, perf_all, facecolors='white', edgecolors='black')
+    plt.scatter(1 + 0.2, perf_right, c='b', marker='o')
+    plt.scatter(1 + 0.2, perf_left, c='r', marker='o')
+
+plt.xticks([0,1],['Left stim', 'Right stim'])
+plt.ylabel('Performance')
+plt.show()
+
+#%% No left right info
+fig = plt.figure()
+
+plt.scatter(np.ones(len(performance_ctl)) * 0.2, performance_opto_left, c='b', marker='x', label="Perturbation trials")
+plt.scatter(np.ones(len(performance_ctl)) * -0.2, performance_ctl, c='b', marker='o', label="Control trials")
+
+
+plt.bar([0.2], np.mean(performance_opto_left), 0.4, fill=False)
+plt.bar([-0.2], np.mean(performance_ctl), 0.4, fill=False)
+
+plt.scatter(np.ones(len(performance_ctl)) * 1.2, performance_opto_right, c='b', marker='x', label="Perturbation trials")
+plt.scatter(np.ones(len(performance_ctl)) * 0.8, performance_ctl, c='b', marker='o', label="Control trials")
+
+plt.bar([1.2], np.mean(performance_opto_right), 0.4, fill=False)
+plt.bar([0.8], np.mean(performance_ctl), 0.4, fill=False)
+
+for i in range(len(performance_ctl)):
+    
+    plt.plot([-0.2, 0.2], [performance_ctl[i], performance_opto_left[i]], color='grey')
+    plt.plot([0.8, 1.2], [performance_ctl[i], performance_opto_right[i]], color='grey')
+
+
+plt.xticks([0,1],['Left stim', 'Right stim'])
+
+plt.show()
+
+
+

@@ -544,7 +544,7 @@ class Session:
         else:
             start, stop = window if len(window) != 0 else (-0.2, self.time_cutoff)
 
-        time = np.arange(start, stop, timestep)
+        time = np.arange(start, stop, 0.001)
         
         n_rep = len(trials)
         total_counts = np.zeros_like(time)
@@ -553,7 +553,7 @@ class Session:
         for i_rep in trials:
             # Calculate histogram for each spike train
             counts, _ = np.histogram(self.spks[neuron][0, i_rep], 
-                                     bins=np.arange(start, stop + timestep, timestep))
+                                     bins=np.arange(start, stop + 0.001, 0.001))
             total_counts = np.vstack((total_counts, counts / n_rep))
 
         stderr = np.std(total_counts[1:], axis=0) / np.sqrt(total_counts.shape[0])
@@ -984,7 +984,7 @@ class Session:
         
     ## OLD EPHYS PLOTS UNEDITED
     
-    def plot_number_of_sig_neurons(self, window = 200, return_nums=False, save=False, y_axis = []):
+    def plot_number_of_sig_neurons(self, window = 200, p=0.01, return_nums=False, save=False, y_axis = []):
         
         """Plots number of contra / ipsi neurons over course of trial
                                 
@@ -999,7 +999,7 @@ class Session:
         y_axis : list, optional
             set top and bottom ylim
         """
-        
+        p_value = p
 
         # x = np.arange(-6.97,6,self.fs)[:self.time_cutoff]
         x = np.arange(0, 8.5, window/1000)
@@ -1022,7 +1022,7 @@ class Session:
                 l = self.get_spike_count(n, (x[t], x[t]+window/1000), L_correct_trials)
                 
                 t_val, p = stats.ttest_ind(r, l)
-                p = p < 0.01
+                p = p < p_value
                 
                 if self.unit_side[n] == 'L':
                     if t_val > 0: # R > L
@@ -1358,7 +1358,7 @@ class Session:
     
     def selectivity_optogenetics(self, save=False, p = 0.0001, lickdir = False, 
                                  return_traces = False, exclude_unselective=False,
-                                 binsize=50, timestep=1,
+                                 binsize=50, timestep=1, epoch = None,
                                  fix_axis = [], selective_neurons = [], downsample=False,
                                  bootstrap=False):
         
@@ -1382,8 +1382,8 @@ class Session:
 
 
         # x = np.arange(-6.97,4,self.fs)[:self.time_cutoff]
-        
-        epoch = (self.response-1.5, self.response) # Late delay
+        if epoch is None:
+            epoch = (self.response-1.5, self.response) # Late delay
         
         # Late delay selective neurons
         delay_neurons = self.get_epoch_selective(epoch, p=p)
@@ -1457,10 +1457,14 @@ class Session:
         erro_stimleft = np.std(opto_sel_stim_left, axis=0) / np.sqrt(len(delay_neurons))
         erro_stimright = np.std(opto_sel_stim_right, axis=0) / np.sqrt(len(delay_neurons))
         
-        return sel, selo_stimleft, selo_stimright, err, erro_stimleft, erro_stimright, time
         
-        if return_traces:
+        if return_traces: # return granular version for aggregating across FOVs
 
+            return control_sel, opto_sel_stim_left, opto_sel_stim_right, time #, err, erro_stimleft, erro_stimright, time
+        
+        else: # Single FOV view
+        
             return sel, selo_stimleft, selo_stimright, err, erro_stimleft, erro_stimright, time
+
         
         
