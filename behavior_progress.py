@@ -44,6 +44,11 @@ paths = [
 
 performance_opto_left, performance_opto_right = [], []
 performance_ctl = []
+
+stim_left_performance_opto_left, stim_left_performance_opto_right = [], []
+stim_right_performance_opto_left, stim_right_performance_opto_right = [], []
+performance_ctl_right, performance_ctl_left = [], []
+
 fig = plt.figure()
 
 for path in paths:
@@ -55,28 +60,47 @@ for path in paths:
     
     perf_right, perf_left, perf_all = s1.performance_in_trials(left_stim_trials)
     performance_opto_left += [perf_all]
-
+    stim_left_performance_opto_left += [perf_left]
+    stim_left_performance_opto_right += [perf_right]
+    
+    
     perf_rightctl, perf_leftctl, perf_all = s1.performance_in_trials(control_trials)
     performance_ctl += [perf_all]
-  
+    performance_ctl_right += [perf_rightctl]
+    performance_ctl_left += [perf_leftctl]
+    
     plt.plot([0 - 0.2, 0 + 0.2], [perf_rightctl, perf_right], color='blue', alpha=0.3)
     plt.plot([0 - 0.2, 0 + 0.2], [perf_leftctl, perf_left], color='red', alpha=0.3)
-    plt.scatter(0 - 0.2, perf_rightctl, c='b', marker='o')
-    plt.scatter(0 - 0.2, perf_leftctl, c='r', marker='o')
+    # plt.scatter(0 - 0.2, perf_rightctl, c='b', marker='o')
+    # plt.scatter(0 - 0.2, perf_leftctl, c='r', marker='o')
     # plt.scatter(0 - 0.2, perf_all, facecolors='white', edgecolors='black')
-    plt.scatter(0 + 0.2, perf_right, c='b', marker='o')
-    plt.scatter(0 + 0.2, perf_left, c='r', marker='o')
+    # plt.scatter(0 + 0.2, perf_right, c='b', marker='o')
+    # plt.scatter(0 + 0.2, perf_left, c='r', marker='o')
     
     perf_right, perf_left, perf_all = s1.performance_in_trials(right_stim_trials)
     performance_opto_right += [perf_all]
+    stim_right_performance_opto_left += [perf_left]
+    stim_right_performance_opto_right += [perf_right]
     
     plt.plot([1 - 0.2, 1 + 0.2], [perf_rightctl, perf_right], color='blue', alpha=0.3)
     plt.plot([1 - 0.2, 1 + 0.2], [perf_leftctl, perf_left], color='red', alpha=0.3)
-    plt.scatter(1 - 0.2, perf_rightctl, c='b', marker='o')
-    plt.scatter(1 - 0.2, perf_leftctl, c='r', marker='o')
+    # plt.scatter(1 - 0.2, perf_rightctl, c='b', marker='o')
+    # plt.scatter(1 - 0.2, perf_leftctl, c='r', marker='o')
     # plt.scatter(0 - 0.2, perf_all, facecolors='white', edgecolors='black')
-    plt.scatter(1 + 0.2, perf_right, c='b', marker='o')
-    plt.scatter(1 + 0.2, perf_left, c='r', marker='o')
+    # plt.scatter(1 + 0.2, perf_right, c='b', marker='o')
+    # plt.scatter(1 + 0.2, perf_left, c='r', marker='o')
+
+
+
+plt.errorbar([-0.2, 0.2], [np.mean(performance_ctl_right), np.mean(stim_left_performance_opto_right)], 
+             yerr = [np.std(performance_ctl_right), np.std(stim_left_performance_opto_right)], marker = 'o', color='blue')
+plt.errorbar([-0.2, 0.2], [np.mean(performance_ctl_left), np.mean(stim_left_performance_opto_left)], 
+             yerr = [np.std(performance_ctl_left), np.std(stim_left_performance_opto_left)], marker = 'o', color='red')
+
+plt.errorbar([1-0.2, 1+0.2], [np.mean(performance_ctl_right), np.mean(stim_right_performance_opto_right)], 
+             yerr = [np.std(performance_ctl_right), np.std(stim_right_performance_opto_right)], marker = 'o', color='blue')
+plt.errorbar([1-0.2, 1+0.2], [np.mean(performance_ctl_left), np.mean(stim_right_performance_opto_left)],
+             yerr = [np.std(performance_ctl_left), np.std(stim_right_performance_opto_left)], marker = 'o', color='red')
 
 plt.xticks([0,1],['Left stim', 'Right stim'])
 plt.ylabel('Performance')
