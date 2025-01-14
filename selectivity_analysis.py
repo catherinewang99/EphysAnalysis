@@ -22,8 +22,8 @@ plt.rcParams['pdf.fonttype'] = '42'
 #%% Aggregate over all FOVs for this analysis
 
 paths = [
-            r'J:\ephys_data\CW49\python\2024_12_11',
-            r'J:\ephys_data\CW49\python\2024_12_12',
+            # r'J:\ephys_data\CW49\python\2024_12_11',
+            # r'J:\ephys_data\CW49\python\2024_12_12',
             r'J:\ephys_data\CW49\python\2024_12_13',
             r'J:\ephys_data\CW49\python\2024_12_14',
             r'J:\ephys_data\CW49\python\2024_12_15',
@@ -43,6 +43,8 @@ left_choice_sel, right_choice_sel = [],[]
 
 for path in paths:
     s1 = Session(path, passive=False, side='L')
+    s1.good_neurons = [n for n in s1.good_neurons if n in np.where(s1.celltype == 3)[0]]
+
     delay_neurons = s1.get_epoch_selective(epoch=(s1.response-1.5, s1.response), p=0.05)
     
     pref,nonpref,_ = s1.plot_selectivity(delay_neurons, plot=False, binsize=200, timestep=50)
@@ -61,6 +63,8 @@ for path in paths:
     left_choice_sel += [np.array(delay_sel) / len(s1.good_neurons)]
     
     s1 = Session(path, passive=False, side='R')
+    s1.good_neurons = [n for n in s1.good_neurons if n in np.where(s1.celltype == 3)[0]]
+
     delay_neurons = s1.get_epoch_selective(epoch=(s1.response-1.5, s1.response), p=0.05)
     
     pref,nonpref,time = s1.plot_selectivity(delay_neurons, plot=False, binsize=200, timestep=50)
@@ -126,3 +130,46 @@ for i in range(2):
         axarr[i, j].axhline(0, color = 'grey', alpha=0.5, ls = '--')
         
 axarr[1,0].legend()
+
+#%% Proportion of selective neurons as a bar graph (left vs right hemisphere)
+paths = [
+            # r'J:\ephys_data\CW49\python\2024_12_11',
+            # r'J:\ephys_data\CW49\python\2024_12_12',
+            r'J:\ephys_data\CW49\python\2024_12_13',
+            r'J:\ephys_data\CW49\python\2024_12_14',
+            r'J:\ephys_data\CW49\python\2024_12_15',
+            r'J:\ephys_data\CW49\python\2024_12_16',
+        
+        ]
+
+
+delay_right, delay_left = [], []
+p=0.0001
+
+for path in paths:
+    s1 = Session(path, passive=False, side='L')
+    s1.good_neurons = [n for n in s1.good_neurons if n in np.where(s1.celltype == 3)[0]]
+
+    delay_neurons = s1.get_epoch_selective(epoch=(s1.response-1.5, s1.response), p=p)
+    
+    delay_left += [len(delay_neurons) / len(s1.good_neurons)]
+    
+    
+    s1 = Session(path, passive=False, side='R')
+    s1.good_neurons = [n for n in s1.good_neurons if n in np.where(s1.celltype == 3)[0]]
+
+    delay_neurons = s1.get_epoch_selective(epoch=(s1.response-1.5, s1.response), p=p)
+
+    delay_right += [len(delay_neurons) / len(s1.good_neurons)]
+
+    
+f=plt.figure(figsize=(5,7))
+
+plt.bar([0,1], [np.mean(delay_left), np.mean(delay_right)])
+plt.scatter(np.zeros(len(delay_left)), delay_left)
+plt.scatter(np.ones(len(delay_right)), delay_right)
+plt.xticks([0,1], ['Left', 'Right'])
+plt.ylabel('Proportion of selective neurons')
+
+
+

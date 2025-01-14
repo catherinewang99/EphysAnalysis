@@ -68,8 +68,8 @@ plt.show()
 #%% Aggregate FOV view
 
 paths = [
-            r'J:\ephys_data\CW49\python\2024_12_11',
-            r'J:\ephys_data\CW49\python\2024_12_12',
+            # r'J:\ephys_data\CW49\python\2024_12_11',
+            # r'J:\ephys_data\CW49\python\2024_12_12',
             r'J:\ephys_data\CW49\python\2024_12_13',
             r'J:\ephys_data\CW49\python\2024_12_14',
             r'J:\ephys_data\CW49\python\2024_12_15',
@@ -80,13 +80,13 @@ paths = [
 all_control_sel, all_opto_sel_stim_left, all_opto_sel_stim_right = [],[],[]
 
 for path in paths:
-    s1 = Session(path, passive=False, side='R')
+    s1 = Session(path, passive=False, side='L')
     s1.good_neurons = [n for n in s1.good_neurons if n in np.where(s1.celltype == 3)[0]]
     control_sel, opto_sel_stim_left, opto_sel_stim_right, time = s1.selectivity_optogenetics(epoch = (s1.delay, s1.response),
                                                                                             p=0.05, 
                                                                                             binsize=150, 
                                                                                             timestep=50,
-                                                                                            return_traces=True)
+                                                                                            return_traces=False)
     
     all_control_sel += control_sel
     all_opto_sel_stim_left += opto_sel_stim_left
@@ -138,4 +138,44 @@ axarr[0].set_ylabel('Selectivity')
 plt.suptitle('{} ALM recording ({} neurons)'.format(s1.side, len(all_control_sel)))
 
 plt.show()
+
+#%% Plot modularity as a proportion
+
+paths = [
+            # r'J:\ephys_data\CW49\python\2024_12_11',
+            # r'J:\ephys_data\CW49\python\2024_12_12',
+            r'J:\ephys_data\CW49\python\2024_12_13',
+            r'J:\ephys_data\CW49\python\2024_12_14',
+            r'J:\ephys_data\CW49\python\2024_12_15',
+            r'J:\ephys_data\CW49\python\2024_12_16',
+        
+        ]
+
+all_opto_prop_stim_left, all_opto_prop_stim_right = [],[]
+
+for path in paths:
+    s1 = Session(path, passive=False, side='R')
+    s1.good_neurons = [n for n in s1.good_neurons if n in np.where(s1.celltype == 3)[0]]
+    sel, selo_stimleft, selo_stimright, _, _, _, time = s1.selectivity_optogenetics(epoch = (s1.delay, s1.response),
+                                                                                    p=0.05, 
+                                                                                    binsize=150, 
+                                                                                    timestep=50,
+                                                                                    return_traces=False)
     
+    period = np.where((time > s1.delay) & (time < s1.delay + 1))[0] # Coupling
+    
+    # period = np.where((time > s1.delay + 1) & (time < s1.delay + 3))[0] # Robustness
+    
+    all_opto_prop_stim_left += [np.mean(selo_stimleft[period]) / np.mean(sel[period])]
+    all_opto_prop_stim_right += [np.mean(selo_stimright[period]) / np.mean(sel[period])]
+    
+    
+f=plt.figure(figsize=(7,5))
+
+plt.bar([0,1], [np.mean(all_opto_prop_stim_left), np.mean(all_opto_prop_stim_right)])
+plt.scatter(np.zeros(len(all_opto_prop_stim_left)), all_opto_prop_stim_left)
+plt.scatter(np.ones(len(all_opto_prop_stim_right)), all_opto_prop_stim_right)
+plt.xticks([0,1], ['Left stim', 'Right stim'])
+plt.ylabel('Modularity')
+
+
