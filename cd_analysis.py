@@ -11,7 +11,7 @@ sys.path.append("C:\scripts\Ephys analysis\ephys_pipeline")
 import numpy as np
 import scipy.io as scio
 import matplotlib.pyplot as plt
-from session import Session
+from ephysSession import Session
 from activitymode import Mode
 # import activityMode
 from matplotlib.pyplot import figure
@@ -23,7 +23,7 @@ import random
 from scipy import stats
 from statsmodels.stats.proportion import proportions_ztest
 
-## Paths
+#%% Paths
 
 path = r'J:\ephys_data\CW49\python\2024_12_13'
 
@@ -40,8 +40,8 @@ paths = [
         ]
 
 s1 = Mode(path, side='R')#, timestep=1)#, passive=False)
-# s1.plot_CD(mode_input='stimulus')
-s1.plot_CD_opto()
+s1.plot_CD(mode_input='stimulus')
+# s1.plot_CD_opto()
 
 #%% Aggregate over FOVs
 
@@ -50,9 +50,10 @@ for path in paths:
     
     s1 = Mode(path, side='L')#, timestep=1)#, passive=False)
 
-    r, l = s1.plot_CD(mode_input='stimulus', return_traces = True)
+    r, l = s1.plot_CD(mode_input='choice', return_traces = True)
     
-    period = np.where((s1.t > s1.sample) & (s1.t < s1.delay))[0] # Sample period
+    # period = np.where((s1.t > s1.sample) & (s1.t < s1.delay))[0] # Sample period
+    period = np.where((s1.t > s1.delay) & (s1.t < s1.response))[0] # Delay period
 
     if np.mean(r[period]) < np.mean(l[period]):
         
@@ -83,10 +84,13 @@ plt.axvline(s1.delay, ls='--', color='grey')
 plt.axvline(s1.response, ls='--', color='grey')
         
 #%% Recovery to stim
+path = r'J:\ephys_data\CW49\python\2024_12_15'
 
+s1 = Mode(path, side='R')#, timestep=1)#, passive=False)
+s1.plot_CD_opto(stim_side = 'L')
 
-
-
+s1 = Mode(path, side='L')#, timestep=1)#, passive=False)
+s1.plot_CD_opto(stim_side = 'R')
 
 
 

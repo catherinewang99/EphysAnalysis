@@ -13,6 +13,7 @@ import scipy.io as scio
 import matplotlib.pyplot as plt
 import session
 import behavior
+import sys
 cat = np.concatenate
 plt.rcParams['pdf.fonttype'] = '42' 
 sys.path.append("C:\scripts\Ephys analysis\ephys_pipeline")
@@ -25,10 +26,13 @@ from session import Session
 # b.learning_progression(window = 50)
 
 b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW49\python_behavior', behavior_only=True)
-b.learning_progression(window = 50)
+b.learning_progression(window = 50,  color_background=range(32-6)) # All but the last 6 days
 
-# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW52\python_behavior', behavior_only=True)
-# b.learning_progression(window = 50)
+# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW53\python_behavior', behavior_only=True)
+# b.learning_progression(window = 50, color_background=range(25))
+
+# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW54\python_behavior', behavior_only=True)
+# b.learning_progression(window = 50, color_background=range(8))
 
 #%% Plot behavior effect to stim
 
@@ -131,6 +135,63 @@ for i in range(len(performance_ctl)):
 plt.xticks([0,1],['Left stim', 'Right stim'])
 
 plt.show()
+
+#%% Learning speed comparison to normal learning
+
+# Number of trials to reach 70% at <1.3s
+
+delay_length = 1.3
+performance = 0.75
+window = 25
+
+imaging_paths = [
+    
+    r'F:\data\Behavior data\BAYLORCW032\python_behavior',
+    r'F:\data\Behavior data\BAYLORCW034\python_behavior',
+    r'F:\data\Behavior data\BAYLORCW035\python_behavior',
+    r'F:\data\Behavior data\BAYLORCW036\python_behavior',
+    r'H:\data\Behavior data\BAYLORCW044\python_behavior',
+    r'H:\data\Behavior data\BAYLORCW046\python_behavior',
+    
+    ]
+ephys_paths = [
+    
+    r'J:\ephys_data\Behavior data\CW49\python_behavior',
+    r'J:\ephys_data\Behavior data\CW53\python_behavior',
+    r'J:\ephys_data\Behavior data\CW54\python_behavior',
+
+    
+    ]
+
+imaging_trials = []
+for path in imaging_paths:
+    b = behavior.Behavior(path, behavior_only=True)
+    imaging_trials += [b.time_to_reach_perf(performance, delay_length, window=window)]
+
+
+ephys_trials = []
+for path in ephys_paths:
+    b = behavior.Behavior(path, behavior_only=True)
+    ephys_trials += [b.time_to_reach_perf(performance, delay_length, window=window)]
+
+
+f=plt.figure()
+
+plt.bar([0,1],[np.mean(imaging_trials), np.mean(ephys_trials)])
+plt.scatter(np.zeros(len(imaging_trials)), imaging_trials)
+plt.scatter(np.ones(len(ephys_trials)), ephys_trials)
+plt.xticks([0,1],['Regular learning', 'Corr. learning'])
+plt.ylabel('Number of trials')
+plt.title('Time to reach {}% performance at <{}s delay'.format(performance*100, delay_length))
+
+
+
+
+
+
+
+
+
 
 
 

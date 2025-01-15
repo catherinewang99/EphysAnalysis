@@ -12,7 +12,7 @@ sys.path.append("C:\scripts\Ephys analysis\ephys_pipeline")
 import numpy as np
 import scipy.io as scio
 import matplotlib.pyplot as plt
-from session import Session
+from ephysSession import Session
 from matplotlib.pyplot import figure
 # import decon
 from scipy.stats import chisquare

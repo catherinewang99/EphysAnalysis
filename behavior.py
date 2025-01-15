@@ -664,10 +664,50 @@ class Behavior():
             
             return (self.L_correct[0] + self.R_correct[0]).astype(int) 
 
+
+    def time_to_reach_perf(self, performance, delay_threshold, window=20):
+        """
         
+        The number of trials (or other metric) needed to reach a performance threshold
+        for a given delay length upper limit 
+        i.e. number of trials needed to reach 70% at less than 1s delay
 
+    
+        Parameters
+        ----------
+        performance : TYPE
+            DESCRIPTION.
+        delay_threshold : TYPE
+            DESCRIPTION.
+        window : int
+            the number of trials to calculate the performance, default 20.
 
-                        
+        Returns
+        -------
+        None.
+
+        """
+        
+        trial_count = 0
+        
+        for sess in range(self.total_sessions):
+            
+            delay = self.delay_duration[sess]
+            
+            if len(np.where(delay > delay_threshold)[0]) == 0: # If no delay lengths exceed the threshold
+                                
+                correct = self.L_correct[sess] + self.R_correct[sess]
+                correct = np.convolve(correct, np.ones(window*2)/(window*2), mode = 'same')
+                correct = correct[window:-window]
+                
+                if len(np.where(correct > performance)[0]) > 0: # if it exceeds performance % at some point
+                
+                    trial_count += np.where(correct>performance)[0][0] + window
+                    return trial_count
+                
+                else:
+                    
+                    trial_count += len(delay)
         
 
         

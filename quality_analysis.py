@@ -12,7 +12,7 @@ sys.path.append("C:\scripts\Ephys analysis\ephys_pipeline")
 import numpy as np
 import scipy.io as scio
 import matplotlib.pyplot as plt
-from session import Session
+from ephysSession import Session
 import behavior
 cat = np.concatenate
 plt.rcParams['pdf.fonttype'] = '42' 

@@ -14,7 +14,7 @@ from scipy import stats
 import copy
 import scipy.io as scio
 from sklearn.preprocessing import normalize
-from session import Session
+from ephysSession import Session
 import sympy
 from random import shuffle
 import time
@@ -22,8 +22,8 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 plt.rcParams['pdf.fonttype'] = 42 
 
 class Mode(Session):
-    def __init__(self, path, side = 'all', passive=False, laser='blue',
-                 proportion_train = 0.5, lickdir=True,
+    def __init__(self, path, side = 'all', passive=False, laser='blue', only_ppyr=True,
+                 proportion_train = 0.5, lickdir=False,
                  responsive_neurons = [], train_test_trials = [],
                  binsize=400, timestep=10):
     # def __init__(self, path, lickdir=True, use_reg=False, triple=False, filter_reg= True, 
@@ -70,7 +70,8 @@ class Mode(Session):
 
         """
         # Inherit all parameters and functions of session.py
-        super().__init__(path=path, side=side, passive=passive, laser=laser)
+        super().__init__(path=path, side=side, passive=passive, laser=laser,
+                         only_ppyr=only_ppyr)
         
         self.lickdir = lickdir
         self.binsize = binsize
@@ -131,7 +132,10 @@ class Mode(Session):
             r_trials = [i for i in self.i_good_trials if not self.early_lick[i] and self.stim_ON[i] and (self.R_correct[i] or self.R_wrong[i])]
             l_trials = [i for i in self.i_good_trials if not self.early_lick[i] and self.stim_ON[i] and (self.L_correct[i] or self.L_wrong[i])]
             
-            
+            r_trials_stimright = [i for i in self.i_good_trials if not self.early_lick[i] and self.stim_ON[i] and self.stim_side[i] == 'R' and (self.R_correct[i] or self.R_wrong[i])]
+            l_trials_stimright = [i for i in self.i_good_trials if not self.early_lick[i] and self.stim_ON[i] and self.stim_side[i] == 'R' and (self.L_correct[i] or self.L_wrong[i])]
+            r_trials_stimleft = [i for i in self.i_good_trials if not self.early_lick[i] and self.stim_ON[i] and self.stim_side[i] == 'L' and (self.R_correct[i] or self.R_wrong[i])]
+            l_trials_stimleft = [i for i in self.i_good_trials if not self.early_lick[i] and self.stim_ON[i] and self.stim_side[i] == 'L' and (self.L_correct[i] or self.L_wrong[i])]            
         # Sort by lick dir
         else:
             print('Sort by lick dir')
@@ -139,6 +143,11 @@ class Mode(Session):
             r_trials = [i for i in self.i_good_trials if not self.early_lick[i] and self.stim_ON[i] and (self.R_correct[i] or self.L_wrong[i])]
             l_trials = [i for i in self.i_good_trials if not self.early_lick[i] and self.stim_ON[i] and (self.L_correct[i] or self.R_wrong[i])]
             
+            r_trials_stimright = [i for i in self.i_good_trials if not self.early_lick[i] and self.stim_ON[i] and self.stim_side[i] == 'R' and (self.R_correct[i] or self.L_wrong[i])]
+            l_trials_stimright = [i for i in self.i_good_trials if not self.early_lick[i] and self.stim_ON[i] and self.stim_side[i] == 'R' and (self.L_correct[i] or self.R_wrong[i])]
+            r_trials_stimleft = [i for i in self.i_good_trials if not self.early_lick[i] and self.stim_ON[i] and self.stim_side[i] == 'L' and (self.R_correct[i] or self.L_wrong[i])]
+            l_trials_stimleft = [i for i in self.i_good_trials if not self.early_lick[i] and self.stim_ON[i] and self.stim_side[i] == 'L' and (self.L_correct[i] or self.R_wrong[i])]            
+        
         np.random.shuffle(r_trials) # shuffle the items in 
         np.random.shuffle(l_trials) # shuffle the items in 
         numr, numl = len(r_trials), len(l_trials)
@@ -148,6 +157,12 @@ class Mode(Session):
         
         self.r_opto_idx = r_trials
         self.l_opto_idx = l_trials
+
+        self.r_opto_stim_right_idx = r_trials_stimright
+        self.l_opto_stim_right_idx = l_trials_stimright   
+        
+        self.r_opto_stim_left_idx = r_trials_stimleft
+        self.l_opto_stim_left_idx = l_trials_stimleft   
         
         ## ASSIGN NEURAL ACTIVITY PER train_idx / test_idx
         
@@ -471,27 +486,27 @@ class Mode(Session):
             CD_choice_mode = np.mean(wt[:, i_t], axis=1)
             
             wt = (PSTH_yes_correct + PSTH_no_correct)/2
-            i_t = np.where((T_cue_aligned_sel > t_response) & (T_cue_aligned_sel < (t_response)))[0]
+            i_t = np.where((T_cue_aligned_sel > t_response) & (T_cue_aligned_sel < (t_response + 1.3)))[0]
             CD_outcome_mode = np.mean(wt[:, i_t], axis=1)
             
            
             wt = (PSTH_yes_correct - PSTH_no_correct)/2
-            i_t = np.where((T_cue_aligned_sel > (t_sample)) & (T_cue_aligned_sel < (t_sample)))[0]
+            i_t = np.where((T_cue_aligned_sel > (t_sample+0.2)) & (T_cue_aligned_sel < (t_sample+0.4)))[0]
             CD_sample_mode = np.mean(wt[:, i_t], axis=1)
             
-            i_t = np.where((T_cue_aligned_sel > (t_response)) & (T_cue_aligned_sel < (t_response)))[0]
+            i_t = np.where((T_cue_aligned_sel > (t_response-0.3)) & (T_cue_aligned_sel < (t_response-0.1)))[0]
             CD_delay_mode = np.mean(wt[:, i_t], axis=1)
             
-            i_t = np.where((T_cue_aligned_sel > (t_response)) & (T_cue_aligned_sel < (t_response)))[0]
+            i_t = np.where((T_cue_aligned_sel > (t_response+0.1)) & (T_cue_aligned_sel < (t_response+0.3)))[0]
             CD_go_mode = np.mean(wt[:, i_t], axis=1)
             
             wt = (PSTH_yes_correct + PSTH_no_correct)/2
-            i_t1 = np.where((T_cue_aligned_sel > (t_sample-3)) & (T_cue_aligned_sel < (t_sample-1)))[0]
-            i_t2 = np.where((T_cue_aligned_sel > (t_response-3)) & (T_cue_aligned_sel < (t_response-1)))[0]
+            i_t1 = np.where((T_cue_aligned_sel > (t_sample-0.3)) & (T_cue_aligned_sel < (t_sample-0.1)))[0]
+            i_t2 = np.where((T_cue_aligned_sel > (t_response-0.3)) & (T_cue_aligned_sel < (t_response-0.1)))[0]
             Ramping_mode = np.mean(wt[:, i_t2], axis=1) - np.mean(wt[:, i_t1], axis=1)
             
-            i_t1 = np.where((T_cue_aligned_sel > (t_response-2)) & (T_cue_aligned_sel < t_response))[0]
-            i_t2 = np.where((T_cue_aligned_sel > t_response) & (T_cue_aligned_sel < (t_response+2)))[0]
+            i_t1 = np.where((T_cue_aligned_sel > (t_response-0.1)) & (T_cue_aligned_sel < t_response))[0]
+            i_t2 = np.where((T_cue_aligned_sel > t_response) & (T_cue_aligned_sel < (t_response+0.1)))[0]
             GoDirection_mode = np.mean(wt[:, i_t2], axis=1) - np.mean(wt[:, i_t1], axis=1)
             
         elif lickdir:
@@ -510,62 +525,62 @@ class Mode(Session):
             
             
             wt = PSTH_yes_correct - PSTH_no_correct
-            i_t = np.where((T_cue_aligned_sel > (t_sample)) & (T_cue_aligned_sel < (t_sample)))[0]
+            i_t = np.where((T_cue_aligned_sel > (t_sample+0.2)) & (T_cue_aligned_sel < (t_sample+0.4)))[0]
             CD_sample_mode = np.mean(wt[:, i_t], axis=1)
             
-            i_t = np.where((T_cue_aligned_sel > (t_response)) & (T_cue_aligned_sel < (t_response)))[0]
+            i_t = np.where((T_cue_aligned_sel > (t_response-0.3)) & (T_cue_aligned_sel < (t_response-0.1)))[0]
             CD_delay_mode = np.mean(wt[:, i_t], axis=1)
             
-            i_t = np.where((T_cue_aligned_sel > (t_response)) & (T_cue_aligned_sel < (t_response)))[0]
+            i_t = np.where((T_cue_aligned_sel > (t_response+0.1)) & (T_cue_aligned_sel < (t_response+0.3)))[0]
             CD_go_mode = np.mean(wt[:, i_t], axis=1)
             
             wt = (PSTH_yes_correct + PSTH_no_correct)/2
-            i_t1 = np.where((T_cue_aligned_sel > (t_sample-3)) & (T_cue_aligned_sel < (t_sample-1)))[0]
-            i_t2 = np.where((T_cue_aligned_sel > (t_response-3)) & (T_cue_aligned_sel < (t_response-1)))[0]
+            i_t1 = np.where((T_cue_aligned_sel > (t_sample-0.3)) & (T_cue_aligned_sel < (t_sample-0.1)))[0]
+            i_t2 = np.where((T_cue_aligned_sel > (t_response-0.3)) & (T_cue_aligned_sel < (t_response-0.1)))[0]
             Ramping_mode = np.mean(wt[:, i_t2], axis=1) - np.mean(wt[:, i_t1], axis=1)
             
-            i_t1 = np.where((T_cue_aligned_sel > (t_response-2)) & (T_cue_aligned_sel < t_response))[0]
-            i_t2 = np.where((T_cue_aligned_sel > t_response) & (T_cue_aligned_sel < (t_response+2)))[0]
+            i_t1 = np.where((T_cue_aligned_sel > (t_response-0.1)) & (T_cue_aligned_sel < t_response))[0]
+            i_t2 = np.where((T_cue_aligned_sel > t_response) & (T_cue_aligned_sel < (t_response+0.1)))[0]
             GoDirection_mode = np.mean(wt[:, i_t2], axis=1) - np.mean(wt[:, i_t1], axis=1)
         
-        elif use_LDA:
+        # elif use_LDA: # not implemented
             
-            # wt = (PSTH_yes_correct + PSTH_yes_error) / 2 - (PSTH_no_correct + PSTH_no_error) / 2
-            i_t = np.where((T_cue_aligned_sel > t_sample) & (T_cue_aligned_sel < t_delay))[0]
-            x = np.vstack((((PSTH_yes_correct + PSTH_yes_error) / 2)[:, i_t], ((PSTH_no_correct + PSTH_no_error) / 2)[:, i_t]))
-            y = cat((np.zeros((PSTH_yes_correct + PSTH_yes_error).shape[0]), np.ones((PSTH_no_correct + PSTH_no_error).shape[0])))
-            clf=LDA()
+            # # wt = (PSTH_yes_correct + PSTH_yes_error) / 2 - (PSTH_no_correct + PSTH_no_error) / 2
+            # i_t = np.where((T_cue_aligned_sel > t_sample) & (T_cue_aligned_sel < t_delay))[0]
+            # x = np.vstack((((PSTH_yes_correct + PSTH_yes_error) / 2)[:, i_t], ((PSTH_no_correct + PSTH_no_error) / 2)[:, i_t]))
+            # y = cat((np.zeros((PSTH_yes_correct + PSTH_yes_error).shape[0]), np.ones((PSTH_no_correct + PSTH_no_error).shape[0])))
+            # clf=LDA()
             
             
-            CD_stim_mode = np.mean(wt[:, i_t], axis=1)
+            # CD_stim_mode = np.mean(wt[:, i_t], axis=1)
         
-            wt = (PSTH_yes_correct + PSTH_no_error) / 2 - (PSTH_no_correct + PSTH_yes_error) / 2
-            i_t = np.where((T_cue_aligned_sel > t_delay) & (T_cue_aligned_sel < t_response))[0]
-            CD_choice_mode = np.mean(wt[:, i_t], axis=1)
+            # wt = (PSTH_yes_correct + PSTH_no_error) / 2 - (PSTH_no_correct + PSTH_yes_error) / 2
+            # i_t = np.where((T_cue_aligned_sel > t_delay) & (T_cue_aligned_sel < t_response))[0]
+            # CD_choice_mode = np.mean(wt[:, i_t], axis=1)
             
-            wt = (PSTH_yes_correct + PSTH_no_correct) / 2 - (PSTH_yes_error + PSTH_no_error) / 2
-            i_t = np.where((T_cue_aligned_sel > t_response) & (T_cue_aligned_sel < (t_response)))[0]
-            CD_outcome_mode = np.mean(wt[:, i_t], axis=1)
+            # wt = (PSTH_yes_correct + PSTH_no_correct) / 2 - (PSTH_yes_error + PSTH_no_error) / 2
+            # i_t = np.where((T_cue_aligned_sel > t_response) & (T_cue_aligned_sel < (t_response)))[0]
+            # CD_outcome_mode = np.mean(wt[:, i_t], axis=1)
             
            
-            wt = PSTH_yes_correct - PSTH_no_correct
-            i_t = np.where((T_cue_aligned_sel > (t_sample)) & (T_cue_aligned_sel < (t_sample)))[0]
-            CD_sample_mode = np.mean(wt[:, i_t], axis=1)
+            # wt = PSTH_yes_correct - PSTH_no_correct
+            # i_t = np.where((T_cue_aligned_sel > (t_sample)) & (T_cue_aligned_sel < (t_sample)))[0]
+            # CD_sample_mode = np.mean(wt[:, i_t], axis=1)
             
-            i_t = np.where((T_cue_aligned_sel > (t_response)) & (T_cue_aligned_sel < (t_response)))[0]
-            CD_delay_mode = np.mean(wt[:, i_t], axis=1)
+            # i_t = np.where((T_cue_aligned_sel > (t_response)) & (T_cue_aligned_sel < (t_response)))[0]
+            # CD_delay_mode = np.mean(wt[:, i_t], axis=1)
             
-            i_t = np.where((T_cue_aligned_sel > (t_response)) & (T_cue_aligned_sel < (t_response)))[0]
-            CD_go_mode = np.mean(wt[:, i_t], axis=1)
+            # i_t = np.where((T_cue_aligned_sel > (t_response)) & (T_cue_aligned_sel < (t_response)))[0]
+            # CD_go_mode = np.mean(wt[:, i_t], axis=1)
             
-            wt = (PSTH_yes_correct + PSTH_no_correct)/2
-            i_t1 = np.where((T_cue_aligned_sel > (t_sample-3)) & (T_cue_aligned_sel < (t_sample-1)))[0]
-            i_t2 = np.where((T_cue_aligned_sel > (t_response-3)) & (T_cue_aligned_sel < (t_response-1)))[0]
-            Ramping_mode = np.mean(wt[:, i_t2], axis=1) - np.mean(wt[:, i_t1], axis=1)
+            # wt = (PSTH_yes_correct + PSTH_no_correct)/2
+            # i_t1 = np.where((T_cue_aligned_sel > (t_sample-3)) & (T_cue_aligned_sel < (t_sample-1)))[0]
+            # i_t2 = np.where((T_cue_aligned_sel > (t_response-3)) & (T_cue_aligned_sel < (t_response-1)))[0]
+            # Ramping_mode = np.mean(wt[:, i_t2], axis=1) - np.mean(wt[:, i_t1], axis=1)
             
-            i_t1 = np.where((T_cue_aligned_sel > (t_response-2)) & (T_cue_aligned_sel < t_response))[0]
-            i_t2 = np.where((T_cue_aligned_sel > t_response) & (T_cue_aligned_sel < (t_response+2)))[0]
-            GoDirection_mode = np.mean(wt[:, i_t2], axis=1) - np.mean(wt[:, i_t1], axis=1)
+            # i_t1 = np.where((T_cue_aligned_sel > (t_response-2)) & (T_cue_aligned_sel < t_response))[0]
+            # i_t2 = np.where((T_cue_aligned_sel > t_response) & (T_cue_aligned_sel < (t_response+2)))[0]
+            # GoDirection_mode = np.mean(wt[:, i_t2], axis=1) - np.mean(wt[:, i_t1], axis=1)
             
         else: # Lickdir except for stim mode, STANDARD
             
@@ -584,22 +599,22 @@ class Mode(Session):
             
            
             wt = PSTH_yes_correct - PSTH_no_correct
-            i_t = np.where((T_cue_aligned_sel > (t_sample)) & (T_cue_aligned_sel < (t_sample)))[0]
+            i_t = np.where((T_cue_aligned_sel > (t_sample+0.2)) & (T_cue_aligned_sel < (t_sample+0.4)))[0]
             CD_sample_mode = np.mean(wt[:, i_t], axis=1)
             
-            i_t = np.where((T_cue_aligned_sel > (t_response)) & (T_cue_aligned_sel < (t_response)))[0]
+            i_t = np.where((T_cue_aligned_sel > (t_response-0.3)) & (T_cue_aligned_sel < (t_response-0.1)))[0]
             CD_delay_mode = np.mean(wt[:, i_t], axis=1)
             
-            i_t = np.where((T_cue_aligned_sel > (t_response)) & (T_cue_aligned_sel < (t_response)))[0]
+            i_t = np.where((T_cue_aligned_sel > (t_response+0.1)) & (T_cue_aligned_sel < (t_response+0.3)))[0]
             CD_go_mode = np.mean(wt[:, i_t], axis=1)
             
             wt = (PSTH_yes_correct + PSTH_no_correct)/2
-            i_t1 = np.where((T_cue_aligned_sel > (t_sample-3)) & (T_cue_aligned_sel < (t_sample-1)))[0]
-            i_t2 = np.where((T_cue_aligned_sel > (t_response-3)) & (T_cue_aligned_sel < (t_response-1)))[0]
+            i_t1 = np.where((T_cue_aligned_sel > (t_sample-0.3)) & (T_cue_aligned_sel < (t_sample-0.1)))[0]
+            i_t2 = np.where((T_cue_aligned_sel > (t_response-0.3)) & (T_cue_aligned_sel < (t_response-0.1)))[0]
             Ramping_mode = np.mean(wt[:, i_t2], axis=1) - np.mean(wt[:, i_t1], axis=1)
             
-            i_t1 = np.where((T_cue_aligned_sel > (t_response-2)) & (T_cue_aligned_sel < t_response))[0]
-            i_t2 = np.where((T_cue_aligned_sel > t_response) & (T_cue_aligned_sel < (t_response+2)))[0]
+            i_t1 = np.where((T_cue_aligned_sel > (t_response-0.1)) & (T_cue_aligned_sel < t_response))[0]
+            i_t2 = np.where((T_cue_aligned_sel > t_response) & (T_cue_aligned_sel < (t_response+0.1)))[0]
             GoDirection_mode = np.mean(wt[:, i_t2], axis=1) - np.mean(wt[:, i_t1], axis=1)
 
         
@@ -1693,7 +1708,7 @@ class Mode(Session):
       
 ## Modes with optogenetic inhibition
     
-    def plot_CD_opto(self, mode_input = 'choice', save=None, return_traces = False, 
+    def plot_CD_opto(self, stim_side, mode_input = 'choice', save=None, return_traces = False,
                      return_applied = False, normalize=False, ctl=False, lickdir=False):
         '''
         Plots similar figure as Li et al 2016 Fig 3c to view the effect of
@@ -1771,9 +1786,11 @@ class Mode(Session):
 
         # activityRL_opto= np.concatenate((r_opto, l_opto), axis=1)
   
-        
-        r_trials, l_trials = self.r_opto_idx, self.l_opto_idx
-        
+        if stim_side == 'R':
+            r_trials, l_trials = self.r_opto_stim_right_idx, self.l_opto_stim_right_idx
+        elif stim_side == 'L':
+            r_trials, l_trials = self.r_opto_stim_left_idx, self.l_opto_stim_left_idx
+
         r_proj = []
         l_proj = []
         
@@ -1824,7 +1841,7 @@ class Mode(Session):
         plt.plot(x, r_proj_mean, 'b', linewidth = 2)
         plt.plot(x, l_proj_mean, 'r', linewidth = 2)
         
-        plt.fill_between(x, r_proj_mean - stats.sem(l_proj, axis=0), 
+        plt.fill_between(x, l_proj_mean - stats.sem(l_proj, axis=0), 
                  l_proj_mean +  stats.sem(l_proj, axis=0),
                  color=['#ffaeb1'])
         plt.fill_between(x, r_proj_mean - stats.sem(r_proj, axis=0), 

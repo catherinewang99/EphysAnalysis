@@ -51,7 +51,7 @@ class Session:
     -------
 
     """
-    def __init__(self, path, side = 'all', passive=False, laser='blue'):
+    def __init__(self, path, side = 'all', passive=False, laser='blue', only_ppyr=True):
         
 
         """
@@ -96,6 +96,9 @@ class Session:
         elif side == 'R':
             self.num_neurons = len(self.R_alm_idx)
             self.good_neurons = self.R_alm_idx
+
+        if only_ppyr:
+            self.good_neurons = [n for n in self.good_neurons if n in np.where(self.celltype == 3)[0]]
 
         self.side = side
         
@@ -154,6 +157,15 @@ class Session:
         self.stim_ON = cat(behavior['StimDur_tmp']) > 0
         
         self.i_good_trials = cat(behavior['i_good_trials']) - 1 # zero indexing in python
+        
+        # Take out non stable trials from igoodtrials
+        stable_trials_tmp = self.stable_trials[self.good_neurons] # Only filter based on the relevant neurons
+        common_values = stable_trials_tmp[0]
+        for arr in stable_trials_tmp[1:]:
+            common_values = np.intersect1d(common_values, arr)
+        print('{} trials removed for stability reasons'.format(len(self.i_good_trials) - len(np.intersect1d(common_values, self.i_good_trials))))
+        
+        self.i_good_trials = np.intersect1d(common_values, self.i_good_trials)
 
         if 'StimLevel' in behavior.keys():
             self.stim_level = cat(behavior['StimLevel'])
@@ -576,9 +588,10 @@ class Session:
         window = np.ones(binsize) / (binsize / 1000)
         
         # Convolve histogram with smoothing window
-        total_counts = np.sum(total_counts[1:], axis=0)
+        # total_counts = np.sum(total_counts[1:], axis=0)
         # PSTH = convolve(total_counts, window, mode='same')
-        PSTH = fftconvolve(total_counts.sum(axis=0), window, mode='same')
+        total_counts = total_counts.sum(axis=0)
+        PSTH = fftconvolve(total_counts, window, mode='same')
 
         # Adjust time and PSTH to remove edge effects from convolution
         trim_indices = slice(binsize, -binsize)
@@ -594,15 +607,17 @@ class Session:
         returns the concatenated PSTH of multiple of neurons over some trials
         """
         all_PSTH = []
+        all_std_err = []
         
         for neuron in neurons:
             PSTH, time, stderr = self.get_PSTH(neuron = neuron, trials=trials, 
                                                binsize=binsize, timestep=timestep,
                                                window=window)
             
-            all_PSTH += [all_PSTH]
+            all_PSTH += [PSTH]
+            all_std_err += [stderr]
 
-        return all_PSTH            
+        return np.array(all_PSTH), time, np.array(all_std_err)         
             
     
     ### SIMPLE PLOTTING FUNCTIONS ###
