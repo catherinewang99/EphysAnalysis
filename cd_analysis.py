@@ -50,10 +50,10 @@ for path in paths:
     
     s1 = Mode(path, side='L')#, timestep=1)#, passive=False)
 
-    r, l = s1.plot_CD(mode_input='choice', return_traces = True)
+    r, l = s1.plot_CD(mode_input='stimulus', return_traces = True)
     
-    # period = np.where((s1.t > s1.sample) & (s1.t < s1.delay))[0] # Sample period
-    period = np.where((s1.t > s1.delay) & (s1.t < s1.response))[0] # Delay period
+    period = np.where((s1.t > s1.sample) & (s1.t < s1.delay))[0] # Sample period
+    # period = np.where((s1.t > s1.delay) & (s1.t < s1.response))[0] # Delay period
 
     if np.mean(r[period]) < np.mean(l[period]):
         
@@ -84,7 +84,7 @@ plt.axvline(s1.delay, ls='--', color='grey')
 plt.axvline(s1.response, ls='--', color='grey')
         
 #%% Recovery to stim
-path = r'J:\ephys_data\CW49\python\2024_12_15'
+path = r'J:\ephys_data\CW49\python\2024_12_14'
 
 s1 = Mode(path, side='R')#, timestep=1)#, passive=False)
 s1.plot_CD_opto(stim_side = 'L')

@@ -1848,7 +1848,7 @@ class Mode(Session):
                  r_proj_mean + stats.sem(r_proj, axis=0),
                  color=['#b4b2dc'])
         
-        plt.hlines(y=max(cat((l_proj_mean, r_proj_mean))) + 0.5, xmin=self.delay, xmax=self.delay+1, linewidth=10, color='red')
+        plt.hlines(y=max(cat((l_proj_mean, r_proj_mean))) + 0.5, xmin=self.delay, xmax=self.delay+1, linewidth=10, color='lightblue')
 
         if save is not None:
             plt.savefig(save)
