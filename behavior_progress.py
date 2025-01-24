@@ -11,28 +11,37 @@ Analyze ephys behavior
 import numpy as np
 import scipy.io as scio
 import matplotlib.pyplot as plt
-import session
+# import session
 import behavior
 import sys
 cat = np.concatenate
 plt.rcParams['pdf.fonttype'] = '42' 
 sys.path.append("C:\scripts\Ephys analysis\ephys_pipeline")
 
-from session import Session
+from ephysSession import Session
 
 
 #%% Plot learning progression
 # b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW48\python_behavior', behavior_only=True)
 # b.learning_progression(window = 50)
 
-b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW49\python_behavior', behavior_only=True)
-b.learning_progression(window = 50,  color_background=range(32-6)) # All but the last 6 days
+# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW49\python_behavior', behavior_only=True)
+# b.learning_progression(window = 50,  color_background=range(32-6)) # All but the last 6 days
 
 # b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW53\python_behavior', behavior_only=True)
-# b.learning_progression(window = 50, color_background=range(25))
+# b.learning_progression(window = 75, color_background=range(34))
 
-# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW54\python_behavior', behavior_only=True)
-# b.learning_progression(window = 50, color_background=range(8))
+# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW59\python_behavior', behavior_only=True)
+# b.learning_progression(window = 75)#, color_background=range(31))
+
+# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW61\python_behavior', behavior_only=True)
+# b.learning_progression(window = 75)#, color_background=range(31))
+
+# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW54t\python_behavior', behavior_only=True)
+# b.learning_progression(window = 75)#, color_background=range(31))
+
+b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW54\python_behavior', behavior_only=True)
+b.learning_progression(window = 50, color_background=range(18))
 
 #%% Plot behavior effect to stim
 

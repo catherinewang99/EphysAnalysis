@@ -16,7 +16,7 @@ import sys
 import numpy as np
 import scipy.io as scio
 import matplotlib.pyplot as plt
-from session import Session
+from ephysSession import Session
 import os
 from numpy import concatenate as cat
 
