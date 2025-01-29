@@ -18,12 +18,12 @@ plt.rcParams['pdf.fonttype'] = '42'
 
 #%% Single FOV view
 path = r'H:\ephys_data\CW47\python\2024_10_25'
-path = r'J:\ephys_data\CW49\python\2024_12_14'
+path = r'J:\ephys_data\CW53\python\2025_01_27'
 
 s1 = Session(path, passive=False, side='R')
 s1.good_neurons = [n for n in s1.good_neurons if n in np.where(s1.celltype == 3)[0]]
 sel, selo_stimleft, selo_stimright, err, erro_stimleft, erro_stimright, time = s1.selectivity_optogenetics(epoch = (s1.delay, s1.response),
-                                                                                                           p=0.05, 
+                                                                                                           p=0.001, 
                                                                                                            binsize=150, 
                                                                                                            timestep=50)
 

@@ -29,19 +29,24 @@ from ephysSession import Session
 # b.learning_progression(window = 50,  color_background=range(32-6)) # All but the last 6 days
 
 # b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW53\python_behavior', behavior_only=True)
-# b.learning_progression(window = 75, color_background=range(34))
+# b.learning_progression(window = 75, color_background=range(36))
 
 # b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW59\python_behavior', behavior_only=True)
 # b.learning_progression(window = 75)#, color_background=range(31))
 
-# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW61\python_behavior', behavior_only=True)
-# b.learning_progression(window = 75)#, color_background=range(31))
+b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW61\python_behavior', behavior_only=True)
+b.learning_progression(window = 75, color_background=range(3))
 
 # b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW54t\python_behavior', behavior_only=True)
 # b.learning_progression(window = 75)#, color_background=range(31))
 
-b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW54\python_behavior', behavior_only=True)
-b.learning_progression(window = 50, color_background=range(18))
+# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW54\python_behavior', behavior_only=True)
+# b.learning_progression(window = 50, color_background=range(23))
+
+# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW57\python_behavior', behavior_only=True)
+# b.learning_progression(window = 50, color_background=range(20))
+
+
 
 #%% Plot behavior effect to stim
 
