@@ -22,7 +22,7 @@ from activitymode import Mode
 #%% Paths
 
 path = r'J:\ephys_data\CW53\python\2025_02_02'
-l1 = Mode(path, passive=False, side='R')
+l1 = Mode(path, passive=False, side='R', stimside='L')
 
-input_vec = l1.input_vector(by_trialtype=False, plot=True)
+input_vec = l1.input_vector(by_trialtype=True, plot=True)
 cd_choice, _ = l1.plot_CD(mode_input='choice', plot=False)

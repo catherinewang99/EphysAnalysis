@@ -22,7 +22,8 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 plt.rcParams['pdf.fonttype'] = 42 
 
 class Mode(Session):
-    def __init__(self, path, side = 'all', passive=False, laser='blue', only_ppyr=True,
+    def __init__(self, path, side = 'all', stimside = 'all', 
+                 passive=False, laser='blue', only_ppyr=True,
                  proportion_train = 0.5, lickdir=False,
                  responsive_neurons = [], train_test_trials = [],
                  binsize=400, timestep=10):
@@ -76,6 +77,7 @@ class Mode(Session):
         self.lickdir = lickdir
         self.binsize = binsize
         self.timestep = timestep
+        self.stimside = stimside
         # if len(responsive_neurons) == 0:
         #     _ = self.get_stim_responsive_neurons()
         # else:
@@ -148,13 +150,34 @@ class Mode(Session):
             r_trials_stimleft = [i for i in self.i_good_trials if not self.early_lick[i] and self.stim_ON[i] and self.stim_side[i] == 'L' and (self.R_correct[i] or self.L_wrong[i])]
             l_trials_stimleft = [i for i in self.i_good_trials if not self.early_lick[i] and self.stim_ON[i] and self.stim_side[i] == 'L' and (self.L_correct[i] or self.R_wrong[i])]            
         
-        np.random.shuffle(r_trials) # shuffle the items in 
-        np.random.shuffle(l_trials) # shuffle the items in 
-        numr, numl = len(r_trials), len(l_trials)
             
-        self.r_train_opto_idx, self.l_train_opto_idx = r_trials[:int(numr*self.proportion_train)], l_trials[:int(numl*self.proportion_train)]
-        self.r_test_opto_idx, self.l_test_opto_idx = r_trials[int(numr*self.proportion_train):], l_trials[int(numl*self.proportion_train):]
+        if self.stimside == 'all':
+            
+            np.random.shuffle(r_trials) # shuffle the items in 
+            np.random.shuffle(l_trials) # shuffle the items in 
+            numr, numl = len(r_trials), len(l_trials)
+            
+            self.r_train_opto_idx, self.l_train_opto_idx = r_trials[:int(numr*self.proportion_train)], l_trials[:int(numl*self.proportion_train)]
+            self.r_test_opto_idx, self.l_test_opto_idx = r_trials[int(numr*self.proportion_train):], l_trials[int(numl*self.proportion_train):]
         
+        elif self.stimside == 'R':
+            
+            np.random.shuffle(r_trials_stimright) # shuffle the items in 
+            np.random.shuffle(l_trials_stimright) # shuffle the items in 
+            numr, numl = len(r_trials_stimright), len(l_trials_stimright)
+            
+            self.r_train_opto_idx, self.l_train_opto_idx = r_trials_stimright[:int(numr*self.proportion_train)], l_trials_stimright[:int(numl*self.proportion_train)]
+            self.r_test_opto_idx, self.l_test_opto_idx = r_trials_stimright[int(numr*self.proportion_train):], l_trials_stimright[int(numl*self.proportion_train):]
+        
+        elif self.stimside == 'L':
+            
+            np.random.shuffle(r_trials_stimleft) # shuffle the items in 
+            np.random.shuffle(l_trials_stimleft) # shuffle the items in 
+            numr, numl = len(r_trials_stimleft), len(l_trials_stimleft)
+            
+            self.r_train_opto_idx, self.l_train_opto_idx = r_trials_stimleft[:int(numr*self.proportion_train)], l_trials_stimleft[:int(numl*self.proportion_train)]
+            self.r_test_opto_idx, self.l_test_opto_idx = r_trials_stimleft[int(numr*self.proportion_train):], l_trials_stimleft[int(numl*self.proportion_train):]
+     
         self.r_opto_idx = r_trials
         self.l_opto_idx = l_trials
 
@@ -2313,59 +2336,51 @@ class Mode(Session):
             roptotest, loptotest = [r_trials_opto[t] for t in self.r_test_opto_idx], [l_trials_opto[t] for t in self.l_test_opto_idx]
             rtest, ltest = [r_trials[t] for t in self.r_test_idx], [l_trials[t] for t in self.l_test_idx]
         
-            CD_all_left, CD_all_right = [], []
-            for t in range(self.delay+int(0.6/self.fs), self.delay+int(1.1/self.fs)):
+        
+            i_t = np.where((self.T_cue_aligned_sel > self.delay+0.5)  & (self.T_cue_aligned_sel < self.delay+1.1))[0]
+            control_activity_left, time, _ = self.get_PSTH_multiple(good_neurons, ltrain, binsize=self.binsize, timestep=self.timestep)
+            opto_activity_left, time, _ = self.get_PSTH_multiple(good_neurons, loptotrain, binsize=self.binsize, timestep=self.timestep)
+            
+            control_activity_right, time, _ = self.get_PSTH_multiple(good_neurons, rtrain, binsize=self.binsize, timestep=self.timestep)
+            opto_activity_right, time, _ = self.get_PSTH_multiple(good_neurons, roptotrain, binsize=self.binsize, timestep=self.timestep)
+
                 
-                control_activity_left = np.mean([trial[good_neurons, t] for trial in self.dff[0, ltrain]], axis=0)
-                opto_activity_left = np.mean([trial[good_neurons, t] for trial in self.dff[0, loptotrain]], axis=0)
-                CD_all_left += [(control_activity_left - opto_activity_left) / 2]
-                
-                control_activity_right = np.mean([trial[good_neurons, t] for trial in self.dff[0, rtrain]], axis=0)
-                opto_activity_right = np.mean([trial[good_neurons, t] for trial in self.dff[0, roptotrain]], axis=0)
-                CD_all_right += [(control_activity_right - opto_activity_right) / 2]
-                
-                
-            CD_input_mode_left = np.mean(CD_all_left, axis=0) 
-            CD_input_mode_right = np.mean(CD_all_right, axis=0) 
+            CD_all_left = (control_activity_left - opto_activity_left) / 2
+            CD_all_right = (control_activity_right - opto_activity_right) / 2
+            
+            CD_input_mode_left = np.mean(CD_all_left[:, i_t], axis=0) 
+            CD_input_mode_right = np.mean(CD_all_right[:, i_t], axis=0) 
             
             
             if plot:
                 if plot_ctl_opto: # Plot traces as control vs stim averaged traces for L and R trials separately
                 
-                    activityRL_testR = []
-                    activityRL_testR_opto = []
-                    for n in good_neurons:
-                        
-                        activityRL_testR += [np.mean([trial[n, :self.time_cutoff] for trial in self.dff[0, [r_trials[t] for t in self.r_test_idx]]], axis=0)]
-                        activityRL_testR_opto += [np.mean([trial[n, :self.time_cutoff] for trial in self.dff[0, [r_trials_opto[t] for t in self.r_test_opto_idx]]], axis=0)]
-                        
-                    activityRL_testL = []
-                    activityRL_testL_opto = []
-                    for n in good_neurons:
-                        
-                        activityRL_testL += [np.mean([trial[n, :self.time_cutoff] for trial in self.dff[0, [l_trials[t] for t in self.l_test_idx]]], axis=0)]
-                        activityRL_testL_opto += [np.mean([trial[n, :self.time_cutoff] for trial in self.dff[0, [l_trials_opto[t] for t in self.l_test_opto_idx]]], axis=0)]
-
-                    activityRL_testR, activityRL_testR_opto, activityRL_testL, activityRL_testL_opto = np.array(activityRL_testR), np.array(activityRL_testR_opto), np.array(activityRL_testL), np.array(activityRL_testL_opto)
-    
+                    
+                    activityRL_testR = self.get_PSTH_multiple(good_neurons, [r_trials[t] for t in self.r_test_idx], binsize=self.binsize, timestep=self.timestep)
+                    activityRL_testR_opto = self.get_PSTH_multiple(good_neurons, [r_trials_opto[t] for t in self.r_test_opto_idx], binsize=self.binsize, timestep=self.timestep)
+                    
+                    activityRL_testL = self.get_PSTH_multiple(good_neurons, [l_trials[t] for t in self.l_test_idx], binsize=self.binsize, timestep=self.timestep)
+                    activityRL_testL_opto = self.get_PSTH_multiple(good_neurons, [l_trials_opto[t] for t in self.l_test_opto_idx], binsize=self.binsize, timestep=self.timestep)
+                    
+            
                     allcontroloptotrain_r, allcontroloptotrain_l = cat((roptotrain, rtrain)), cat((loptotrain, ltrain)) 
-    
-                    activityR, activityL = [], []
-                    for n in good_neurons:
+                    activityR = self.get_PSTH_multiple(good_neurons, allcontroloptotrain_r, binsize=self.binsize, timestep=self.timestep)
+                    activityL = self.get_PSTH_multiple(good_neurons, allcontroloptotrain_l, binsize=self.binsize, timestep=self.timestep)
+                    activityR, activityL = activityR[:, i_t], activityL[:, i_t]
+                    
                         
-                        activityR += [np.mean([trial[n, range(self.delay+int(0.6/self.fs), self.delay+int(1.1/self.fs))] for trial in self.dff[0, allcontroloptotrain_r]], axis=0)]
-                        activityL += [np.mean([trial[n, range(self.delay+int(0.6/self.fs), self.delay+int(1.1/self.fs))] for trial in self.dff[0, allcontroloptotrain_l]], axis=0)]
-                        
-                    x = np.arange(-6.97,4,self.fs)[:self.time_cutoff]
+                    x = time
     
-                    # Project for every trial
+                    # Project for every trial skip for ephys data
                     for t in self.r_test_idx:
-                        activity = self.dff[0, r_trials[t]][good_neurons] 
+                        activity = self.get_PSTH_multiple(good_neurons, r_trials[t])
+                        # activity = self.dff[0, r_trials[t]][good_neurons] 
                         activity = activity - np.tile(np.mean(activityR, axis=1)[:, None], (1, activity.shape[1]))
                         proj_allDim = np.dot(activity.T, CD_input_mode_right)
                         plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'grey', alpha = 0.1,  linewidth = 0.5)
                     for t in self.r_test_opto_idx:
-                        activity = self.dff[0, r_trials_opto[t]][good_neurons] 
+                        activity = self.get_PSTH_multiple(good_neurons, r_trials_opto[t])
+                        # activity = self.dff[0, r_trials_opto[t]][good_neurons] 
                         activity = activity - np.tile(np.mean(activityR, axis=1)[:, None], (1, activity.shape[1]))
                         proj_allDim = np.dot(activity.T, CD_input_mode_right)
                         plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'r', alpha = 0.1,  linewidth = 0.5)
@@ -2392,12 +2407,14 @@ class Mode(Session):
                     
                     # Project for every trial
                     for t in self.l_test_idx:
-                        activity = self.dff[0, l_trials[t]][good_neurons]
+                        # activity = self.dff[0, l_trials[t]][good_neurons]
+                        activity = self.get_PSTH_multiple(good_neurons, l_trials[t])
                         activity = activity - np.tile(np.mean(activityL, axis=1)[:, None], (1, activity.shape[1]))
                         proj_allDim = np.dot(activity.T, CD_input_mode_left)
                         plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'grey', alpha = 0.1, linewidth = 0.5)
                     for t in self.l_test_opto_idx:
-                        activity = self.dff[0, l_trials_opto[t]][good_neurons]
+                        # activity = self.dff[0, l_trials_opto[t]][good_neurons]
+                        activity = self.get_PSTH_multiple(good_neurons, l_trials_opto[t])
                         activity = activity - np.tile(np.mean(activityL, axis=1)[:, None], (1, activity.shape[1]))
                         proj_allDim = np.dot(activity.T, CD_input_mode_left)
                         plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'r', alpha = 0.1, linewidth = 0.5)  
