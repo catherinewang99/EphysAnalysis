@@ -170,9 +170,11 @@ class Session:
         if 'StimLevel' in behavior.keys():
             self.stim_level = cat(behavior['StimLevel'])
             self.all_stim_levels = sorted(list(set(self.stim_level)))
-            if not passive:
+            if not passive and laser == 'blue':
                 x_galvo = cat(behavior['xGalvo'])
                 self.stim_side = np.where(x_galvo < 0, 'L', 'R')
+            elif laser == 'red':
+                self.stim_side = np.full(self.num_trials, 'L')
         
         # Re-adjust with i good trials
         self.stim_trials = np.where(self.stim_ON)[0]

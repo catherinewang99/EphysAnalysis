@@ -24,10 +24,15 @@ plt.rcParams['pdf.fonttype'] = '42'
 paths = [
             # r'J:\ephys_data\CW49\python\2024_12_11',
             # r'J:\ephys_data\CW49\python\2024_12_12',
-            r'J:\ephys_data\CW49\python\2024_12_13',
-            r'J:\ephys_data\CW49\python\2024_12_14',
-            r'J:\ephys_data\CW49\python\2024_12_15',
-            r'J:\ephys_data\CW49\python\2024_12_16',
+            # r'J:\ephys_data\CW49\python\2024_12_13',
+            # r'J:\ephys_data\CW49\python\2024_12_14',
+            # r'J:\ephys_data\CW49\python\2024_12_15',
+            # r'J:\ephys_data\CW49\python\2024_12_16',
+            
+            # r'J:\ephys_data\CW53\python\2025_01_27',
+            # r'J:\ephys_data\CW53\python\2025_01_29',
+            # r'J:\ephys_data\CW53\python\2025_01_30',
+            r'J:\ephys_data\CW53\python\2025_02_02',
         
         ]
 

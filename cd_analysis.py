@@ -84,13 +84,13 @@ plt.axvline(s1.delay, ls='--', color='grey')
 plt.axvline(s1.response, ls='--', color='grey')
         
 #%% Recovery to stim
-path = r'J:\ephys_data\CW49\python\2024_12_14'
+path = r'J:\ephys_data\CW53\python\2025_01_31'
 
 s1 = Mode(path, side='R')#, timestep=1)#, passive=False)
 s1.plot_CD_opto(stim_side = 'L')
 
 s1 = Mode(path, side='L')#, timestep=1)#, passive=False)
-s1.plot_CD_opto(stim_side = 'R')
+s1.plot_CD_opto(stim_side = 'L')
 
 
 

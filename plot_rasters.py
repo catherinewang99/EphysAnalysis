@@ -20,7 +20,8 @@ path = r'J:\ephys_data\CW48\python\2024_10_30'
 path = r'J:\ephys_data\CW48\python\2024_11_05'
 path = r'J:\ephys_data\CW49\python\2024_12_12'
 path = r'J:\ephys_data\CW49\python\2024_12_13'
-path = r'J:\ephys_data\CW53\python\2025_01_27'
+path = r'J:\ephys_data\CW53\python\2025_01_29'
+path = r'J:\ephys_data\CW54\python\2025_02_03'
 s1 = Session(path, passive=False)#, side='R')
 
 #%% Plot sig neurons
@@ -34,9 +35,10 @@ for i in range(12,250,35):
 
 #%% 
 #Delay seelective
-for n in s1.get_epoch_selective((s1.delay, s1.response)):# , p=0.01):
+for n in s1.get_epoch_selective((s1.delay, s1.response), p=0.01):
     if s1.unit_side[n] == 'R':
-        s1.plot_raster_and_PSTH(n, opto=True, stimside = 'R', binsize=75, timestep=5)
+        
+        s1.plot_raster_and_PSTH(n, opto=True, stimside = 'L', binsize=150, timestep=5)
 
         
     # s1.plot_raster_and_PSTH(n, binsize=75, timestep=5)
