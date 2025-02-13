@@ -158,6 +158,8 @@ class Session:
         
         self.i_good_trials = cat(behavior['i_good_trials']) - 1 # zero indexing in python
         
+
+        
         # Take out non stable trials from igoodtrials
         stable_trials_tmp = self.stable_trials[self.good_neurons] # Only filter based on the relevant neurons
         common_values = stable_trials_tmp[0]
@@ -166,7 +168,9 @@ class Session:
         print('{} trials removed for stability reasons'.format(len(self.i_good_trials) - len(np.intersect1d(common_values, self.i_good_trials))))
         
         self.i_good_trials = np.intersect1d(common_values, self.i_good_trials)
-
+        self.i_good_non_stim_trials = [t for t in self.i_good_trials if not self.stim_ON[t] and not self.early_lick[t]]
+        self.i_good_stim_trials = [t for t in self.i_good_trials if self.stim_ON[t] and not self.early_lick[t]]
+        
         if 'StimLevel' in behavior.keys():
             self.stim_level = cat(behavior['StimLevel'])
             self.all_stim_levels = sorted(list(set(self.stim_level)))

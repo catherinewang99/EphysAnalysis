@@ -2304,37 +2304,42 @@ class Mode(Session):
             good_neurons = self.good_neurons
         
         # Trial type
-        r_corr = cat((np.where(self.R_correct)[0], np.where(self.R_wrong)[0]))
-        l_corr = cat((np.where(self.L_correct)[0], np.where(self.L_wrong)[0]))
+        # r_corr = cat((np.where(self.R_correct)[0], np.where(self.R_wrong)[0]))
+        # l_corr = cat((np.where(self.L_correct)[0], np.where(self.L_wrong)[0]))
         
-        # Lick dir
-        if self.lickdir:
-            r_corr = cat((np.where(self.R_correct)[0], np.where(self.L_wrong)[0]))
-            l_corr = cat((np.where(self.L_correct)[0], np.where(self.R_wrong)[0]))
+        # # Lick dir
+        # if self.lickdir:
+        #     r_corr = cat((np.where(self.R_correct)[0], np.where(self.L_wrong)[0]))
+        #     l_corr = cat((np.where(self.L_correct)[0], np.where(self.R_wrong)[0]))
             
-        r_trials_opto = [i for i in r_corr if i in self.i_good_stim_trials and not self.early_lick[i]]
-        l_trials_opto = [i for i in l_corr if i in self.i_good_stim_trials and not self.early_lick[i]]
+        # r_trials_opto = [i for i in r_corr if i in self.i_good_stim_trials and not self.early_lick[i]]
+        # l_trials_opto = [i for i in l_corr if i in self.i_good_stim_trials and not self.early_lick[i]]
 
-        r_corr = np.where(self.R_correct)[0]
-        l_corr = np.where(self.L_correct)[0]
+        # r_corr = np.where(self.R_correct)[0]
+        # l_corr = np.where(self.L_correct)[0]
         
-        r_trials = [i for i in r_corr if i in self.i_good_non_stim_trials and not self.early_lick[i]]
-        l_trials = [i for i in l_corr if i in self.i_good_non_stim_trials and not self.early_lick[i]]
+        # r_trials = [i for i in r_corr if i in self.i_good_non_stim_trials and not self.early_lick[i]]
+        # l_trials = [i for i in l_corr if i in self.i_good_non_stim_trials and not self.early_lick[i]]
         
+        alloptotrain = cat((self.r_train_opto_idx, self.l_train_opto_idx))
+        alloptotest = cat((self.r_test_opto_idx, self.l_test_opto_idx))
         
-        alloptotrain = cat(([r_trials_opto[t] for t in self.r_train_opto_idx], [l_trials_opto[t] for t in self.l_train_opto_idx])) 
-        alloptotest = cat(([r_trials_opto[t] for t in self.r_test_opto_idx], [l_trials_opto[t] for t in self.l_test_opto_idx])) 
+        alltrain = cat((self.r_train_idx, self.l_train_idx))
+        alltest = cat((self.r_test_idx, self.l_test_idx))
+        
+        # alloptotrain = cat(([r_trials_opto[t] for t in self.r_train_opto_idx], [l_trials_opto[t] for t in self.l_train_opto_idx])) 
+        # alloptotest = cat(([r_trials_opto[t] for t in self.r_test_opto_idx], [l_trials_opto[t] for t in self.l_test_opto_idx])) 
 
-        alltrain = cat(([r_trials[t] for t in self.r_train_idx], [l_trials[t] for t in self.l_train_idx])) 
-        alltest = cat(([r_trials[t] for t in self.r_test_idx], [l_trials[t] for t in self.l_test_idx])) 
+        # alltrain = cat(([r_trials[t] for t in self.r_train_idx], [l_trials[t] for t in self.l_train_idx])) 
+        # alltest = cat(([r_trials[t] for t in self.r_test_idx], [l_trials[t] for t in self.l_test_idx])) 
 
         if by_trialtype: # Return one for left and one for right trials
         
-            roptotrain, loptotrain = [r_trials_opto[t] for t in self.r_train_opto_idx], [l_trials_opto[t] for t in self.l_train_opto_idx]
-            rtrain, ltrain = [r_trials[t] for t in self.r_train_idx], [l_trials[t] for t in self.l_train_idx]
+            roptotrain, loptotrain = self.r_train_opto_idx, self.l_train_opto_idx
+            rtrain, ltrain = self.r_train_idx, self.l_train_idx
 
-            roptotest, loptotest = [r_trials_opto[t] for t in self.r_test_opto_idx], [l_trials_opto[t] for t in self.l_test_opto_idx]
-            rtest, ltest = [r_trials[t] for t in self.r_test_idx], [l_trials[t] for t in self.l_test_idx]
+            roptotest, loptotest = self.r_test_opto_idx, self.l_test_opto_idx
+            rtest, ltest = self.r_test_idx, self.l_test_idx
         
         
             i_t = np.where((self.T_cue_aligned_sel > self.delay+0.5)  & (self.T_cue_aligned_sel < self.delay+1.1))[0]
@@ -2348,38 +2353,37 @@ class Mode(Session):
             CD_all_left = (control_activity_left - opto_activity_left) / 2
             CD_all_right = (control_activity_right - opto_activity_right) / 2
             
-            CD_input_mode_left = np.mean(CD_all_left[:, i_t], axis=0) 
-            CD_input_mode_right = np.mean(CD_all_right[:, i_t], axis=0) 
-            
-            
+            CD_input_mode_left = np.mean(CD_all_left[:, i_t], axis=1) 
+            CD_input_mode_right = np.mean(CD_all_right[:, i_t], axis=1) 
+                    
             if plot:
-                if plot_ctl_opto: # Plot traces as control vs stim averaged traces for L and R trials separately
                 
                     
-                    activityRL_testR = self.get_PSTH_multiple(good_neurons, [r_trials[t] for t in self.r_test_idx], binsize=self.binsize, timestep=self.timestep)
-                    activityRL_testR_opto = self.get_PSTH_multiple(good_neurons, [r_trials_opto[t] for t in self.r_test_opto_idx], binsize=self.binsize, timestep=self.timestep)
+                activityRL_testR, _, _ = self.get_PSTH_multiple(good_neurons, self.r_test_idx, binsize=self.binsize, timestep=self.timestep)
+                activityRL_testR_opto, _, _ = self.get_PSTH_multiple(good_neurons, self.r_test_opto_idx, binsize=self.binsize, timestep=self.timestep)
+                
+                activityRL_testL, _, _ = self.get_PSTH_multiple(good_neurons, self.l_test_idx, binsize=self.binsize, timestep=self.timestep)
+                activityRL_testL_opto, _, _ = self.get_PSTH_multiple(good_neurons, self.l_test_opto_idx, binsize=self.binsize, timestep=self.timestep)
+                
+        
+                allcontroloptotrain_r, allcontroloptotrain_l = cat((roptotrain, rtrain)), cat((loptotrain, ltrain)) 
+                activityR, _, _ = self.get_PSTH_multiple(good_neurons, allcontroloptotrain_r, binsize=self.binsize, timestep=self.timestep)
+                activityL, _, _ = self.get_PSTH_multiple(good_neurons, allcontroloptotrain_l, binsize=self.binsize, timestep=self.timestep)
+                activityR, activityL = activityR[:, i_t], activityL[:, i_t]
+                
                     
-                    activityRL_testL = self.get_PSTH_multiple(good_neurons, [l_trials[t] for t in self.l_test_idx], binsize=self.binsize, timestep=self.timestep)
-                    activityRL_testL_opto = self.get_PSTH_multiple(good_neurons, [l_trials_opto[t] for t in self.l_test_opto_idx], binsize=self.binsize, timestep=self.timestep)
-                    
-            
-                    allcontroloptotrain_r, allcontroloptotrain_l = cat((roptotrain, rtrain)), cat((loptotrain, ltrain)) 
-                    activityR = self.get_PSTH_multiple(good_neurons, allcontroloptotrain_r, binsize=self.binsize, timestep=self.timestep)
-                    activityL = self.get_PSTH_multiple(good_neurons, allcontroloptotrain_l, binsize=self.binsize, timestep=self.timestep)
-                    activityR, activityL = activityR[:, i_t], activityL[:, i_t]
-                    
-                        
-                    x = time
-    
+                x = time
+                if plot_ctl_opto: # Plot traces as control vs stim averaged traces for L and R trials separately
+
                     # Project for every trial skip for ephys data
                     for t in self.r_test_idx:
-                        activity = self.get_PSTH_multiple(good_neurons, r_trials[t])
+                        activity, _, _ = self.get_PSTH_multiple(good_neurons, t)
                         # activity = self.dff[0, r_trials[t]][good_neurons] 
                         activity = activity - np.tile(np.mean(activityR, axis=1)[:, None], (1, activity.shape[1]))
                         proj_allDim = np.dot(activity.T, CD_input_mode_right)
                         plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'grey', alpha = 0.1,  linewidth = 0.5)
                     for t in self.r_test_opto_idx:
-                        activity = self.get_PSTH_multiple(good_neurons, r_trials_opto[t])
+                        activity, _, _ = self.get_PSTH_multiple(good_neurons, t)
                         # activity = self.dff[0, r_trials_opto[t]][good_neurons] 
                         activity = activity - np.tile(np.mean(activityR, axis=1)[:, None], (1, activity.shape[1]))
                         proj_allDim = np.dot(activity.T, CD_input_mode_right)
@@ -2395,9 +2399,9 @@ class Mode(Session):
                     plt.plot(x, proj_allDim_r[:len(self.T_cue_aligned_sel)], 'grey', linewidth = 2)
                     plt.plot(x, proj_allDim_r_opto[:len(self.T_cue_aligned_sel)], 'red', linewidth = 2)
                     plt.title('Recovery decoder projections - right')
-                    plt.axvline(-4.3, color = 'grey', alpha=0.5, ls = '--')
-                    plt.axvline(-3, color = 'grey', alpha=0.5, ls = '--')
-                    plt.axvline(0, color = 'grey', alpha=0.5, ls = '--')
+                    plt.axvline(self.sample, color = 'grey', alpha=0.5, ls = '--')
+                    plt.axvline(self.delay, color = 'grey', alpha=0.5, ls = '--')
+                    plt.axvline(self.response, color = 'grey', alpha=0.5, ls = '--')
                     plt.ylabel('CD_input projection (a.u.)')
                     
                     plt.show()
@@ -2408,13 +2412,13 @@ class Mode(Session):
                     # Project for every trial
                     for t in self.l_test_idx:
                         # activity = self.dff[0, l_trials[t]][good_neurons]
-                        activity = self.get_PSTH_multiple(good_neurons, l_trials[t])
+                        activity, _, _ = self.get_PSTH_multiple(good_neurons, t)
                         activity = activity - np.tile(np.mean(activityL, axis=1)[:, None], (1, activity.shape[1]))
                         proj_allDim = np.dot(activity.T, CD_input_mode_left)
                         plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'grey', alpha = 0.1, linewidth = 0.5)
                     for t in self.l_test_opto_idx:
                         # activity = self.dff[0, l_trials_opto[t]][good_neurons]
-                        activity = self.get_PSTH_multiple(good_neurons, l_trials_opto[t])
+                        activity, _, _ = self.get_PSTH_multiple(good_neurons, t)
                         activity = activity - np.tile(np.mean(activityL, axis=1)[:, None], (1, activity.shape[1]))
                         proj_allDim = np.dot(activity.T, CD_input_mode_left)
                         plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'r', alpha = 0.1, linewidth = 0.5)  
@@ -2429,240 +2433,190 @@ class Mode(Session):
                     plt.plot(x, proj_allDim_l[:len(self.T_cue_aligned_sel)], 'grey', linewidth = 2)
                     plt.plot(x, proj_allDim_l_opto[:len(self.T_cue_aligned_sel)], 'red', linewidth = 2)
                     plt.title('Recovery decoder projections - left')
-                    plt.axvline(-4.3, color = 'grey', alpha=0.5, ls = '--')
-                    plt.axvline(-3, color = 'grey', alpha=0.5, ls = '--')
-                    plt.axvline(0, color = 'grey', alpha=0.5, ls = '--')
+                    plt.axvline(self.sample, color = 'grey', alpha=0.5, ls = '--')
+                    plt.axvline(self.delay, color = 'grey', alpha=0.5, ls = '--')
+                    plt.axvline(self.response, color = 'grey', alpha=0.5, ls = '--')
                     plt.ylabel('CD_input projection (a.u.)')
                     
                     plt.show()
                     
-                    
-                else:
-                    activityRL_testR = []
-                    for n in good_neurons:
-                        activityRL_testR += [np.mean([trial[n, :self.time_cutoff] for trial in self.dff[0, [r_trials[t] for t in self.r_test_idx]]], axis=0)]
-                    activityRL_testR = np.array(activityRL_testR)
-                    
-                    activityRL_testL = []
-                    for n in good_neurons:
-                        activityRL_testL += [np.mean([trial[n, :self.time_cutoff] for trial in self.dff[0, [l_trials[t] for t in self.l_test_idx]]], axis=0)]
-                    activityRL_testL = np.array(activityRL_testL)
     
-                    allcontroloptotrain_r, allcontroloptotrain_l = cat((roptotrain, rtrain)), cat((loptotrain, ltrain)) 
-    
-                    activityR, activityL = [], []
-                    for n in good_neurons:
-                        
-                        activityR += [np.mean([trial[n, range(self.delay+int(0.6/self.fs), self.delay+int(1.1/self.fs))] for trial in self.dff[0, allcontroloptotrain_r]], axis=0)]
-                        activityL += [np.mean([trial[n, range(self.delay+int(0.6/self.fs), self.delay+int(1.1/self.fs))] for trial in self.dff[0, allcontroloptotrain_l]], axis=0)]
-                        
-                    x = np.arange(-6.97,4,self.fs)[:self.time_cutoff]
-    
-                    # Project for every trial
-                    for t in self.r_test_idx:
-                        activity = self.dff[0, r_trials[t]][good_neurons] 
-                        activity = activity - np.tile(np.mean(activityR, axis=1)[:, None], (1, activity.shape[1]))
-                        proj_allDim = np.dot(activity.T, CD_input_mode_right)
-                        plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'b', alpha = 0.1,  linewidth = 0.5)
-                        
-                    for t in self.l_test_idx:
-                        activity = self.dff[0, l_trials[t]][good_neurons]
-                        activity = activity - np.tile(np.mean(activityL, axis=1)[:, None], (1, activity.shape[1]))
-                        proj_allDim = np.dot(activity.T, CD_input_mode_left)
-                        plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'r', alpha = 0.1, linewidth = 0.5)
-                        
-                    # opto test trials
-                    activityRL_testR = activityRL_testR - np.tile(np.mean(activityR, axis=1)[:, None], (1, activityRL_testR.shape[1]))  # remove mean
-                    proj_allDim_r = np.dot(activityRL_testR.T, CD_input_mode_right)
-      
-                    activityRL_testL = activityRL_testL - np.tile(np.mean(activityL, axis=1)[:, None], (1, activityRL_testL.shape[1]))  # remove mean
-                    proj_allDim_l = np.dot(activityRL_testL.T, CD_input_mode_left)
-    
-                    plt.plot(x, proj_allDim_r[:len(self.T_cue_aligned_sel)], 'b', linewidth = 2)
-                    plt.plot(x, proj_allDim_l[:len(self.T_cue_aligned_sel)], 'r', linewidth = 2)
-                    plt.title('Recovery decoder projections')
-                    plt.axvline(-4.3, color = 'grey', alpha=0.5, ls = '--')
-                    plt.axvline(-3, color = 'grey', alpha=0.5, ls = '--')
-                    plt.axvline(0, color = 'grey', alpha=0.5, ls = '--')
-                    plt.ylabel('CD_input projection (a.u.)')
-                    
-                    plt.show()
                 
             return CD_input_mode_left, CD_input_mode_right
         
-        else: # average over trial types
+        else: # trial type independent
         
-            CD_all = []
-            for t in range(self.delay+int(0.6/self.fs), self.delay+int(1.1/self.fs)):
-    
+        
+            i_t = np.where((self.T_cue_aligned_sel > self.delay+0.5)  & (self.T_cue_aligned_sel < self.delay+1.1))[0]
+            control_activity, time, _ = self.get_PSTH_multiple(good_neurons, alltrain, binsize=self.binsize, timestep=self.timestep)
+            opto_activity, time, _ = self.get_PSTH_multiple(good_neurons, alloptotrain, binsize=self.binsize, timestep=self.timestep)
+            
                 
-                control_activity = np.mean([trial[good_neurons, t] for trial in self.dff[0, alltrain]], axis=0)
-                opto_activity = np.mean([trial[good_neurons, t] for trial in self.dff[0, alloptotrain]], axis=0)
+            CD_all = (control_activity - opto_activity) / 2
+            
+            CD_input_mode = np.mean(CD_all[:, i_t], axis=1) 
+            
+            allcontroloptotrain = cat((alloptotrain, alltrain))
+            activityRL, _, _ = self.get_PSTH_multiple(good_neurons, allcontroloptotrain, binsize=self.binsize, timestep=self.timestep)
+            activityRL = activityRL[:, i_t]
+           
+            orthonormal_basis = CD_input_mode
+            # if orthog: # Process to orthogonalize ignore for now
+            
+            #     allcontroloptotrain = cat((alloptotrain, alltrain))
+            #     activityRL = []
+            #     for n in good_neurons:
+                    
+            #         activityRL += [np.mean([trial[n, range(self.delay+int(0.6/self.fs), self.delay+int(1.1/self.fs))] for trial in self.dff[0, allcontroloptotrain]], axis=0)]
+                    
+            #     activityRL = activityRL - np.mean(activityRL, axis=1, keepdims=True) # remove?
+                
+            #     u, s, v = np.linalg.svd(activityRL.T)
+            #     proj_allDim = activityRL.T @ v
+            
+            
+            
+            #     # Relevant choice dims
+            #     # CD_choice_mode = [] # Late delay period
+                
+            #     CD_input_mode = CD_input_mode / np.linalg.norm(CD_input_mode)
+            #     # return CD_choice_mode, 0
+            #     # Reshape 
+                
+            #     CD_input_mode = np.reshape(CD_input_mode, (-1, 1)) 
+            
+        
+            #     input_ = np.concatenate((CD_input_mode, v), axis=1)
+            #     # orthonormal_basis = self.Gram_Schmidt_process(input_)
+            #     orthonormal_basis, _ = np.linalg.qr(input_, mode='complete')  # lmao
+            #     orthonormal_basis = orthonormal_basis[0]
+                
+            # if return_opto: # Return the projection of every opto trial individually
+            
+            #     activity_optotest = []
+                
+            #     for t in alloptotest:
+            #         activity = self.dff[0, t][good_neurons] 
+            #         activity = activity - np.tile(np.mean(activityRL, axis=1)[:, None], (1, activity.shape[1]))
+            #         proj_allDim = np.dot(activity.T, orthonormal_basis)
+            #         activity_optotest += [proj_allDim[range(self.delay, self.delay+6)]]
+                
+            #     return np.array(activity_optotest)
+                
+            
+            if plot:
+                if plot_ctl_opto: # Plot traces as control vs stim averaged traces
+  
 
-                CD_all += [(control_activity - opto_activity) / 2]
-                
-                
-            CD_input_mode = np.mean(CD_all, axis=0)        
-            
-            
-            if orthog: # Process to orthogonalize
-            
-                allcontroloptotrain = cat((alloptotrain, alltrain))
-                activityRL = []
-                for n in good_neurons:
+                    activityRL_testR, _, _ = self.get_PSTH_multiple(good_neurons, self.r_test_idx, binsize=self.binsize, timestep=self.timestep)
+                    activityRL_testR_opto, _, _ = self.get_PSTH_multiple(good_neurons, self.r_test_opto_idx, binsize=self.binsize, timestep=self.timestep)
                     
-                    activityRL += [np.mean([trial[n, range(self.delay+int(0.6/self.fs), self.delay+int(1.1/self.fs))] for trial in self.dff[0, allcontroloptotrain]], axis=0)]
+                    activityRL_testL, _, _ = self.get_PSTH_multiple(good_neurons, self.l_test_idx, binsize=self.binsize, timestep=self.timestep)
+                    activityRL_testL_opto, _, _ = self.get_PSTH_multiple(good_neurons, self.l_test_opto_idx, binsize=self.binsize, timestep=self.timestep)
                     
-                activityRL = activityRL - np.mean(activityRL, axis=1, keepdims=True) # remove?
-                
-                u, s, v = np.linalg.svd(activityRL.T)
-                proj_allDim = activityRL.T @ v
             
-            
-            
-                # Relevant choice dims
-                # CD_choice_mode = [] # Late delay period
-                
-                CD_input_mode = CD_input_mode / np.linalg.norm(CD_input_mode)
-                # return CD_choice_mode, 0
-                # Reshape 
-                
-                CD_input_mode = np.reshape(CD_input_mode, (-1, 1)) 
-            
-        
-                input_ = np.concatenate((CD_input_mode, v), axis=1)
-                # orthonormal_basis = self.Gram_Schmidt_process(input_)
-                orthonormal_basis, _ = np.linalg.qr(input_, mode='complete')  # lmao
-                orthonormal_basis = orthonormal_basis[0]
-                
-                if return_opto: # Return the projection of every opto trial individually
-                
-                    activity_optotest = []
+                    allcontroloptotrain_r, allcontroloptotrain_l = cat((self.r_train_idx, self.r_train_opto_idx)), cat((self.l_train_idx, self.l_train_opto_idx)) 
+                    activityR, _, _ = self.get_PSTH_multiple(good_neurons, allcontroloptotrain_r, binsize=self.binsize, timestep=self.timestep)
+                    activityL, _, _ = self.get_PSTH_multiple(good_neurons, allcontroloptotrain_l, binsize=self.binsize, timestep=self.timestep)
+                    activityR, activityL = activityR[:, i_t], activityL[:, i_t]
                     
-                    for t in alloptotest:
-                        activity = self.dff[0, t][good_neurons] 
+
+                    x = time
+            
+                    # Project for every trial
+                    for t in self.r_test_idx:
+                        # activity = self.dff[0, r_trials[t]][good_neurons] 
+                        activity, _, _ = self.get_PSTH_multiple(good_neurons, t)
                         activity = activity - np.tile(np.mean(activityRL, axis=1)[:, None], (1, activity.shape[1]))
                         proj_allDim = np.dot(activity.T, orthonormal_basis)
-                        activity_optotest += [proj_allDim[range(self.delay, self.delay+6)]]
+                        plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'grey', alpha = 0.1,  linewidth = 0.5)
+                        
+                    for t in self.l_test_idx:
+                        activity, _, _ = self.get_PSTH_multiple(good_neurons, t)
+                        activity = activity - np.tile(np.mean(activityRL, axis=1)[:, None], (1, activity.shape[1]))
+                        proj_allDim = np.dot(activity.T, orthonormal_basis)
+                        plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'grey', alpha = 0.1, linewidth = 0.5)
+                        
+                    for t in self.r_test_opto_idx:
+                        activity, _, _ = self.get_PSTH_multiple(good_neurons, t)
+                        activity = activity - np.tile(np.mean(activityRL, axis=1)[:, None], (1, activity.shape[1]))
+                        proj_allDim = np.dot(activity.T, orthonormal_basis)
+                        plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'r', alpha = 0.1,  linewidth = 0.5)
+                        
+                    for t in self.l_test_opto_idx:
+                        activity, _, _ = self.get_PSTH_multiple(good_neurons, t)
+                        activity = activity - np.tile(np.mean(activityRL, axis=1)[:, None], (1, activity.shape[1]))
+                        proj_allDim = np.dot(activity.T, orthonormal_basis)
+                        plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'r', alpha = 0.1, linewidth = 0.5)  
+                        
                     
-                    return np.array(activity_optotest)
+                    # control test trials
+                    activityRL_test = cat((activityRL_testR, activityRL_testL), axis=1)
+                    activityRL_test = activityRL_test - np.tile(np.mean(activityRL, axis=1)[:, None], (1, activityRL_test.shape[1]))  # remove mean
+                    proj_allDim = np.dot(activityRL_test.T, orthonormal_basis)
+                    proj_allDim_ctl = np.mean([proj_allDim[:len(self.T_cue_aligned_sel)], proj_allDim[len(self.T_cue_aligned_sel):]], axis=0)
                     
-                
-                if plot:
-                    if plot_ctl_opto: # Plot traces as control vs stim averaged traces
-                        activityRL_testR = []
-                        activityRL_testR_opto = []
-                        for n in good_neurons:
-                            
-                            activityRL_testR += [np.mean([trial[n, :self.time_cutoff] for trial in self.dff[0, [r_trials[t] for t in self.r_test_idx]]], axis=0)]
-                            activityRL_testR_opto += [np.mean([trial[n, :self.time_cutoff] for trial in self.dff[0, [r_trials_opto[t] for t in self.r_test_opto_idx]]], axis=0)]
-                            
-                        activityRL_testL = []
-                        activityRL_testL_opto = []
-                        for n in good_neurons:
-                            
-                            activityRL_testL += [np.mean([trial[n, :self.time_cutoff] for trial in self.dff[0, [l_trials[t] for t in self.l_test_idx]]], axis=0)]
-                            activityRL_testL_opto += [np.mean([trial[n, :self.time_cutoff] for trial in self.dff[0, [l_trials_opto[t] for t in self.l_test_opto_idx]]], axis=0)]
-
-                        x = np.arange(-6.97,4,self.fs)[:self.time_cutoff]
-                
-                        # Project for every trial
-                        for t in self.r_test_idx:
-                            activity = self.dff[0, r_trials[t]][good_neurons] 
-                            activity = activity - np.tile(np.mean(activityRL, axis=1)[:, None], (1, activity.shape[1]))
-                            proj_allDim = np.dot(activity.T, orthonormal_basis)
-                            plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'grey', alpha = 0.1,  linewidth = 0.5)
-                            
-                        for t in self.l_test_idx:
-                            activity = self.dff[0, l_trials[t]][good_neurons]
-                            activity = activity - np.tile(np.mean(activityRL, axis=1)[:, None], (1, activity.shape[1]))
-                            proj_allDim = np.dot(activity.T, orthonormal_basis)
-                            plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'grey', alpha = 0.1, linewidth = 0.5)
-                            
-                        for t in self.r_test_opto_idx:
-                            activity = self.dff[0, r_trials_opto[t]][good_neurons] 
-                            activity = activity - np.tile(np.mean(activityRL, axis=1)[:, None], (1, activity.shape[1]))
-                            proj_allDim = np.dot(activity.T, orthonormal_basis)
-                            plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'r', alpha = 0.1,  linewidth = 0.5)
-                            
-                        for t in self.l_test_opto_idx:
-                            activity = self.dff[0, l_trials_opto[t]][good_neurons]
-                            activity = activity - np.tile(np.mean(activityRL, axis=1)[:, None], (1, activity.shape[1]))
-                            proj_allDim = np.dot(activity.T, orthonormal_basis)
-                            plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'r', alpha = 0.1, linewidth = 0.5)  
-                            
+                    
+                    # opto trials
+                    activityRL_test = cat((activityRL_testR_opto, activityRL_testL_opto), axis=1)
+                    activityRL_test = activityRL_test - np.tile(np.mean(activityRL, axis=1)[:, None], (1, activityRL_test.shape[1]))  # remove mean
+                    proj_allDim = np.dot(activityRL_test.T, orthonormal_basis)
+                    proj_allDim_opto = np.mean([proj_allDim[:len(self.T_cue_aligned_sel)], proj_allDim[len(self.T_cue_aligned_sel):]], axis=0)
+                    
+                    
+                    plt.plot(x, proj_allDim_ctl, 'grey', linewidth = 2)
+                    plt.plot(x, proj_allDim_opto, 'r', linewidth = 2)
+                    plt.title('Recovery decoder projections')
+                    plt.axvline(self.sample, color = 'grey', alpha=0.5, ls = '--')
+                    plt.axvline(self.delay, color = 'grey', alpha=0.5, ls = '--')
+                    plt.axvline(self.response, color = 'grey', alpha=0.5, ls = '--')
+                    plt.ylabel('CD_input projection (a.u.)')
+                    
+                    plt.show()
+                    
+                else:
+                    
+                    activityRL_testR, _, _ = self.get_PSTH_multiple(good_neurons, self.r_test_idx, binsize=self.binsize, timestep=self.timestep)
+                    activityRL_testR_opto, _, _ = self.get_PSTH_multiple(good_neurons, self.r_test_opto_idx, binsize=self.binsize, timestep=self.timestep)
+                    
+                    activityRL_testL, _, _ = self.get_PSTH_multiple(good_neurons, self.l_test_idx, binsize=self.binsize, timestep=self.timestep)
+                    activityRL_testL_opto, _, _ = self.get_PSTH_multiple(good_neurons, self.l_test_opto_idx, binsize=self.binsize, timestep=self.timestep)
+                    
+                    
+                    x = time
+    
+    
+                    # Project for every trial
+                    for t in self.r_test_idx:
+                        activity, _, _ = self.get_PSTH_multiple(good_neurons, t)
+                        activity = activity - np.tile(np.mean(activityRL, axis=1)[:, None], (1, activity.shape[1]))
+                        proj_allDim = np.dot(activity.T, orthonormal_basis)
+                        plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'b', alpha = 0.1,  linewidth = 0.5)
                         
-                        # control test trials
-                        activityRL_test = cat((activityRL_testR, activityRL_testL), axis=1)
-                        activityRL_test = activityRL_test - np.tile(np.mean(activityRL, axis=1)[:, None], (1, activityRL_test.shape[1]))  # remove mean
-                        proj_allDim = np.dot(activityRL_test.T, orthonormal_basis)
-                        proj_allDim_ctl = np.mean([proj_allDim[:len(self.T_cue_aligned_sel)], proj_allDim[len(self.T_cue_aligned_sel):]], axis=0)
+                    for t in self.l_test_idx:
+                        activity, _, _ = self.get_PSTH_multiple(good_neurons, t)
+                        activity = activity - np.tile(np.mean(activityRL, axis=1)[:, None], (1, activity.shape[1]))
+                        proj_allDim = np.dot(activity.T, orthonormal_basis)
+                        plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'r', alpha = 0.1, linewidth = 0.5)
                         
-                        
-                        # opto trials
-                        activityRL_test = cat((activityRL_testR_opto, activityRL_testL_opto), axis=1)
-                        activityRL_test = activityRL_test - np.tile(np.mean(activityRL, axis=1)[:, None], (1, activityRL_test.shape[1]))  # remove mean
-                        proj_allDim = np.dot(activityRL_test.T, orthonormal_basis)
-                        proj_allDim_opto = np.mean([proj_allDim[:len(self.T_cue_aligned_sel)], proj_allDim[len(self.T_cue_aligned_sel):]], axis=0)
-                        
-                        
-                        plt.plot(x, proj_allDim_ctl, 'grey', linewidth = 2)
-                        plt.plot(x, proj_allDim_opto, 'r', linewidth = 2)
-                        plt.title('Recovery decoder projections')
-                        plt.axvline(-4.3, color = 'grey', alpha=0.5, ls = '--')
-                        plt.axvline(-3, color = 'grey', alpha=0.5, ls = '--')
-                        plt.axvline(0, color = 'grey', alpha=0.5, ls = '--')
-                        plt.ylabel('CD_input projection (a.u.)')
-                        
-                        plt.show()
-                        
-                    else:
-                        activityRL_testR = []
-                        for n in good_neurons:
-                            
-                            activityRL_testR += [np.mean([trial[n, :self.time_cutoff] for trial in self.dff[0, [r_trials[t] for t in self.r_test_idx]]], axis=0)]
-                            
-                        activityRL_testL = []
-                        for n in good_neurons:
-                            
-                            activityRL_testL += [np.mean([trial[n, :self.time_cutoff] for trial in self.dff[0, [l_trials[t] for t in self.l_test_idx]]], axis=0)]
-                            
-                        x = np.arange(-6.97,4,self.fs)[:self.time_cutoff]
-        
-                        # orthonormal_basis = orthonormal_basis.reshape(-1,1)
-        
-                        # Project for every trial
-                        for t in self.r_test_idx:
-                            activity = self.dff[0, r_trials[t]][good_neurons] 
-                            activity = activity - np.tile(np.mean(activityRL, axis=1)[:, None], (1, activity.shape[1]))
-                            proj_allDim = np.dot(activity.T, orthonormal_basis)
-                            plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'b', alpha = 0.1,  linewidth = 0.5)
-                            
-                        for t in self.l_test_idx:
-                            activity = self.dff[0, l_trials[t]][good_neurons]
-                            activity = activity - np.tile(np.mean(activityRL, axis=1)[:, None], (1, activity.shape[1]))
-                            proj_allDim = np.dot(activity.T, orthonormal_basis)
-                            plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'r', alpha = 0.1, linewidth = 0.5)
-                            
-                        # opto test trials
-                        activityRL_test = cat((activityRL_testR, activityRL_testL), axis=1)
-                        activityRL_test = activityRL_test - np.tile(np.mean(activityRL, axis=1)[:, None], (1, activityRL_test.shape[1]))  # remove mean
-                        proj_allDim = np.dot(activityRL_test.T, orthonormal_basis)
-                        # print(activityRL_test.shape)
-        
-                        # print(proj_allDim.shape)
-                        
-                        plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'b', linewidth = 2)
-                        plt.plot(x, proj_allDim[len(self.T_cue_aligned_sel):], 'r', linewidth = 2)
-                        plt.title('Recovery decoder projections')
-                        plt.axvline(-4.3, color = 'grey', alpha=0.5, ls = '--')
-                        plt.axvline(-3, color = 'grey', alpha=0.5, ls = '--')
-                        plt.axvline(0, color = 'grey', alpha=0.5, ls = '--')
-                        plt.ylabel('CD_input projection (a.u.)')
-                        
-                        plt.show()
-                        
-                return orthonormal_basis
+                    # opto test trials
+                    activityRL_test = cat((activityRL_testR, activityRL_testL), axis=1)
+                    activityRL_test = activityRL_test - np.tile(np.mean(activityRL, axis=1)[:, None], (1, activityRL_test.shape[1]))  # remove mean
+                    proj_allDim = np.dot(activityRL_test.T, orthonormal_basis)
+                    # print(activityRL_test.shape)
+    
+                    # print(proj_allDim.shape)
+                    
+                    plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'b', linewidth = 2)
+                    plt.plot(x, proj_allDim[len(self.T_cue_aligned_sel):], 'r', linewidth = 2)
+                    plt.title('Recovery decoder projections')
+                    plt.axvline(self.sample, color = 'grey', alpha=0.5, ls = '--')
+                    plt.axvline(self.delay, color = 'grey', alpha=0.5, ls = '--')
+                    plt.axvline(self.response, color = 'grey', alpha=0.5, ls = '--')
+                    plt.ylabel('CD_input projection (a.u.)')
+                    
+                    plt.show()
+                    
                 
             
             return CD_input_mode

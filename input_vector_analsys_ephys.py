@@ -19,10 +19,15 @@ cat = np.concatenate
 plt.rcParams['pdf.fonttype'] = '42' 
 from activitymode import Mode
 
-#%% Paths
+#%% Run analysis
 
-path = r'J:\ephys_data\CW53\python\2025_02_02'
-l1 = Mode(path, passive=False, side='R', stimside='L')
+path = r'J:\ephys_data\CW53\python\2025_01_29'
+s1 = Mode(path, side='R', stimside='L')
 
-input_vec = l1.input_vector(by_trialtype=True, plot=True)
-cd_choice, _ = l1.plot_CD(mode_input='choice', plot=False)
+input_vec = s1.input_vector(by_trialtype=True, plot=True)
+
+input_vec = s1.input_vector(by_trialtype=False, plot=True, plot_ctl_opto=True)
+input_vec = s1.input_vector(by_trialtype=False, plot=True, plot_ctl_opto=False)
+
+
+cd_choice, _ = s1.plot_CD(mode_input='choice', plot=False)
