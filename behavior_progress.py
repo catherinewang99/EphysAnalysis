@@ -175,6 +175,10 @@ ephys_paths = [
     r'J:\ephys_data\Behavior data\CW49\python_behavior',
     r'J:\ephys_data\Behavior data\CW53\python_behavior',
     r'J:\ephys_data\Behavior data\CW54\python_behavior',
+    r'J:\ephys_data\Behavior data\CW59\python_behavior',
+    r'J:\ephys_data\Behavior data\CW61\python_behavior',
+    # r'J:\ephys_data\Behavior data\CW62\python_behavior',
+    # r'J:\ephys_data\Behavior data\CW60\python_behavior',
 
     
     ]

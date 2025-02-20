@@ -51,7 +51,8 @@ class Session:
     -------
 
     """
-    def __init__(self, path, side = 'all', passive=False, laser='blue', only_ppyr=True):
+    def __init__(self, path, side = 'all', stimside = 'all',
+                 passive=False, laser='blue', only_ppyr=True):
         
 
         """
@@ -170,6 +171,7 @@ class Session:
         self.i_good_trials = np.intersect1d(common_values, self.i_good_trials)
         self.i_good_non_stim_trials = [t for t in self.i_good_trials if not self.stim_ON[t] and not self.early_lick[t]]
         self.i_good_stim_trials = [t for t in self.i_good_trials if self.stim_ON[t] and not self.early_lick[t]]
+        
         
         if 'StimLevel' in behavior.keys():
             self.stim_level = cat(behavior['StimLevel'])
@@ -535,7 +537,7 @@ class Session:
     
     
     
-    def get_PSTH(self, neuron, trials, binsize=50, timestep=1, window=()):
+    def get_PSTH(self, neuron, trials, binsize=50, timestep=1, period=()):
         """
         
         Return peristimulus time histogram of a given neuron over specific trials
@@ -564,11 +566,11 @@ class Session:
             return [], [], []
         
         timestep = timestep / 1000
-        if self.passive:
-            start, stop = window if len(window) != 0 else (-0.2, self.time_cutoff)
-        else:
-            start, stop = window if len(window) != 0 else (-0.2, self.time_cutoff)
-
+        # if self.passive:
+        #     start, stop = window if len(window) != 0 else (-0.2, self.time_cutoff)
+        # else:
+        #     start, stop = window if len(window) != 0 else (-0.2, self.time_cutoff)
+        start, stop = (-0.2, self.time_cutoff)
         time = np.arange(start, stop, 0.001)
         
         n_rep = len(trials)
@@ -576,7 +578,7 @@ class Session:
 
         for idx, i_rep in enumerate(trials):
             counts, _ = np.histogram(self.spks[neuron][0, i_rep], 
-                                     bins=np.arange(start, stop + 0.001, 0.001))
+                                     bins=np.arange(start, stop+0.001, 0.001))
             total_counts[idx] = counts / n_rep  # Fill the preallocated array
         # total_counts = np.zeros_like(time)
         
@@ -604,6 +606,12 @@ class Session:
         time = time[trim_indices]
         PSTH = PSTH[trim_indices]
         stderr = stderr[trim_indices]
+        
+        
+        if len(period) != 0:
+            start,stop = period
+            period_idx = np.where((time > start) & (time < stop))
+            return PSTH[period_idx], time[period_idx], stderr[period_idx]
         
         return PSTH, time, stderr
     
@@ -1281,7 +1289,58 @@ class Session:
         
             return sel, selo_stimleft, selo_stimright, err, erro_stimleft, erro_stimright, time
 
+    def susceptibility(self, stimside, p=0.01,
+                       period=None, return_n=False,
+                       binsize=400, timestep=10):
+        """
+        Calculates the per neuron susceptibility to perturbation, measured as a
+        simple difference between control/opto trials during the specified period
 
+        Returns
+        -------
+        all_sus : one positive value for every good neuron
+        p_value : provide a significance measure
+
+        """
+        if period is None:
+            period = (self.delay, self.response)
+            
+        all_sus = []
+        sig_p = [] 
+        sig_n = []
+        
+        for n in self.good_neurons:
+            
+            control_trials = [t for t in self.L_trials if t in self.i_good_non_stim_trials]
+            pert_trials = [t for t in self.L_trials if t in self.i_good_stim_trials]
+            
+            control_left, time, _ = self.get_PSTH(n, control_trials, period=period, binsize=binsize, timestep=timestep)
+            pert_left, _, _ = self.get_PSTH(n, pert_trials, period=period, binsize=binsize, timestep=timestep)
+            diff = np.abs(control_left - pert_left)
+            
+            control_trials = [t for t in self.R_trials if t in self.i_good_non_stim_trials]
+            pert_trials = [t for t in self.R_trials if t in self.i_good_stim_trials]
+
+            control, _, _ = self.get_PSTH(n, control_trials, period=period, binsize=binsize, timestep=timestep)
+            pert, _, _ = self.get_PSTH(n, pert_trials, period=period, binsize=binsize, timestep=timestep)
+            diff += np.abs(control - pert)
+            
+            all_sus += [np.sum(diff)]
+
+            tstat_left, p_val_left = stats.ttest_ind(control_left, pert_left)
+            tstat_right, p_val_right = stats.ttest_ind(control, pert)
+            
+            if p_val_left < p or p_val_right < p:
+                sig_p += [1]
+                sig_n += [n]
+            else:
+                sig_p += [0]
+        
+        if return_n:
+            return sig_n
+        return all_sus, sig_p
+            
+            
   
     ## OLD EPHYS PLOTS UNEDITED
     
