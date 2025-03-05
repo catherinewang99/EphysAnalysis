@@ -27,10 +27,7 @@ class Mode(Session):
                  proportion_train = 0.5, lickdir=False,
                  responsive_neurons = [], train_test_trials = [],
                  binsize=400, timestep=10):
-    # def __init__(self, path, lickdir=True, use_reg=False, triple=False, filter_reg= True, 
-    #              layer_num='all', responsive_neurons = [], use_selective= False, use_background_sub=False,
-    #              baseline_normalization = "dff_avg", proportion_train = 0.5,
-    #              train_test_trials = []):
+
         """
         Child object of Session that allows for activity mode calculations 
         Mostly adds new functions and also train test split of trials 
@@ -188,7 +185,7 @@ class Mode(Session):
         self.l_opto_stim_left_idx = l_trials_stimleft   
         
         ## ASSIGN NEURAL ACTIVITY PER train_idx / test_idx
-        
+        start = time.time()
         counter = 0
         for n in self.good_neurons:
                         
@@ -229,7 +226,7 @@ class Mode(Session):
                 # self.PSTH_l_test_opto = np.concatenate((self.PSTH_l_test_opto, np.reshape(l_opto_test, (1,-1))), axis = 0)
                 
             counter += 1
-            
+        print("time taken: " +str(time.time() - start))
         self.T_cue_aligned_sel = self.t
             
         time_epochs = [self.sample, self.delay, self.response]
@@ -2447,7 +2444,7 @@ class Mode(Session):
         else: # trial type independent
         
         
-            i_t = np.where((self.T_cue_aligned_sel > self.delay+0.5)  & (self.T_cue_aligned_sel < self.delay+1.1))[0]
+            i_t = np.where((self.T_cue_aligned_sel > self.delay+0)  & (self.T_cue_aligned_sel < self.delay+1))[0]
             control_activity, time, _ = self.get_PSTH_multiple(good_neurons, alltrain, binsize=self.binsize, timestep=self.timestep)
             opto_activity, time, _ = self.get_PSTH_multiple(good_neurons, alloptotrain, binsize=self.binsize, timestep=self.timestep)
             

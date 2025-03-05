@@ -19,7 +19,7 @@ plt.rcParams['pdf.fonttype'] = '42'
 #%% Single FOV view
 path = r'H:\ephys_data\CW47\python\2024_10_25'
 path = r'J:\ephys_data\CW53\python\2025_02_01'
-# path = r'J:\ephys_data\CW54\python\2025_02_03'
+path = r'G:\ephys_data\CW59\python\2025_02_26'
 # path = r'J:\ephys_data\CW53\python\2025_02_02'
 
 s1 = Session(path, passive=False, side='R')

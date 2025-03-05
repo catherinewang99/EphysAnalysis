@@ -35,6 +35,8 @@ from itertools import groupby
 from operator import itemgetter
 from scipy.signal import convolve
 from scipy.signal import fftconvolve
+import time as time_
+
 
 class Session:
     """
@@ -505,7 +507,7 @@ class Session:
         
         
     
-    def get_spike_rate(self, neuron, window, trials):
+    def get_spike_rate(self, neuron, window, trials, mean=True):
         """
         Get average spike rate of neuron in a window, over specified trials
 
@@ -533,9 +535,66 @@ class Session:
             count = self.count_spikes(arr, window)
             all_spk_rate += [count / window_len]
             
-        return np.mean(all_spk_rate)
+        if mean:
+            return np.mean(all_spk_rate)
+        else:
+            return all_spk_rate
+    
+        
+    def get_PSTHfaster(self, neuron, trials, binsize=50, timestep=1, period=()):
+        """
+        Return Peristimulus Time Histogram (PSTH) of a given neuron over specific trials.
+        
+        Optimized for speed.
+        """
+        start = time_.time()
+        # Find valid trials (intersection for stable neurons)
+        trials = np.intersect1d(trials, self.stable_trials[neuron])
+    
+        # Return early if no trials are found
+        if len(trials) == 0:
+            return [], [], []
+    
+        # Convert timestep to seconds
+        timestep = timestep / 1000
+    
+        # Define time window
+        start, stop = (-0.2, self.time_cutoff)
+        time = np.arange(start, stop, 0.001)  # High resolution binning
+    
+        # Compute histogram in a vectorized manner
+        bins = np.arange(start, stop + 0.001, 0.001)  # Histogram bin edges
+        total_counts = np.zeros((len(trials), len(time)))
+    
+        spike_data = np.array([self.spks[neuron][0, i_rep] for i_rep in trials])  # Gather all spike data
+    
+        hist_counts = np.array([np.histogram(spikes, bins=bins)[0] for spikes in spike_data])
+        total_counts[:] = hist_counts / len(trials)  # Normalize by number of trials
+    
+        # Compute standard error (vectorized)
+        stderr = np.std(total_counts, axis=0) / np.sqrt(len(trials))
+    
+        # Define smoothing window for convolution
+        window = np.ones(binsize) / (binsize / 1000)
+    
+        # Compute PSTH using fast FFT-based convolution
+        total_counts = np.sum(total_counts, axis=0)
+        PSTH = fftconvolve(total_counts, window, mode='same')
+    
+        # Trim edge effects from convolution
+        trim_indices = slice(binsize, -binsize)
+        time, PSTH, stderr = time[trim_indices], PSTH[trim_indices], stderr[trim_indices]
     
     
+        print(start - time_.time())
+        # Handle optional period slicing
+        if len(period) != 0:
+            start, stop = period
+            period_idx = (time > start) & (time < stop)
+            return PSTH[period_idx], time[period_idx], stderr[period_idx]
+    
+        return PSTH, time, stderr
+
     
     def get_PSTH(self, neuron, trials, binsize=50, timestep=1, period=()):
         """
@@ -560,6 +619,8 @@ class Session:
         - time: array, time values corresponding to PSTH
         """
         
+        start = time_.time()
+
         trials = np.intersect1d(trials, self.stable_trials[neuron])
         
         if len(trials) == 0:
@@ -607,6 +668,7 @@ class Session:
         PSTH = PSTH[trim_indices]
         stderr = stderr[trim_indices]
         
+        # print(start - time_.time())
         
         if len(period) != 0:
             start,stop = period
@@ -626,7 +688,7 @@ class Session:
         for neuron in neurons:
             PSTH, time, stderr = self.get_PSTH(neuron = neuron, trials=trials, 
                                                binsize=binsize, timestep=timestep,
-                                               window=window)
+                                               period=window)
             
             all_PSTH += [PSTH]
             all_std_err += [stderr]
@@ -1291,6 +1353,7 @@ class Session:
 
     def susceptibility(self, stimside, p=0.01,
                        period=None, return_n=False,
+                       by_trial_type = False,
                        binsize=400, timestep=10):
         """
         Calculates the per neuron susceptibility to perturbation, measured as a
@@ -1308,36 +1371,57 @@ class Session:
         all_sus = []
         sig_p = [] 
         sig_n = []
+        all_tstat = []
         
         for n in self.good_neurons:
-            
-            control_trials = [t for t in self.L_trials if t in self.i_good_non_stim_trials]
-            pert_trials = [t for t in self.L_trials if t in self.i_good_stim_trials]
-            
-            control_left, time, _ = self.get_PSTH(n, control_trials, period=period, binsize=binsize, timestep=timestep)
-            pert_left, _, _ = self.get_PSTH(n, pert_trials, period=period, binsize=binsize, timestep=timestep)
-            diff = np.abs(control_left - pert_left)
-            
-            control_trials = [t for t in self.R_trials if t in self.i_good_non_stim_trials]
-            pert_trials = [t for t in self.R_trials if t in self.i_good_stim_trials]
-
-            control, _, _ = self.get_PSTH(n, control_trials, period=period, binsize=binsize, timestep=timestep)
-            pert, _, _ = self.get_PSTH(n, pert_trials, period=period, binsize=binsize, timestep=timestep)
-            diff += np.abs(control - pert)
-            
-            all_sus += [np.sum(diff)]
-
-            tstat_left, p_val_left = stats.ttest_ind(control_left, pert_left)
-            tstat_right, p_val_right = stats.ttest_ind(control, pert)
-            
-            if p_val_left < p or p_val_right < p:
-                sig_p += [1]
-                sig_n += [n]
+            if by_trial_type: # FIXME: should be trial-wise
+                control_trials = [t for t in self.L_trials if t in self.i_good_non_stim_trials]
+                pert_trials = [t for t in self.L_trials if t in self.i_good_stim_trials]
+                
+                control_left, time, _ = self.get_PSTH(n, control_trials, period=period, binsize=binsize, timestep=timestep)
+                pert_left, _, _ = self.get_PSTH(n, pert_trials, period=period, binsize=binsize, timestep=timestep)
+                diff = np.abs(control_left - pert_left)
+                
+                control_trials = [t for t in self.R_trials if t in self.i_good_non_stim_trials]
+                pert_trials = [t for t in self.R_trials if t in self.i_good_stim_trials]
+    
+                control, _, _ = self.get_PSTH(n, control_trials, period=period, binsize=binsize, timestep=timestep)
+                pert, _, _ = self.get_PSTH(n, pert_trials, period=period, binsize=binsize, timestep=timestep)
+                diff += np.abs(control - pert)
+                
+                all_sus += [np.sum(diff)]
+    
+                tstat_left, p_val_left = stats.ttest_ind(control_left, pert_left)
+                tstat_right, p_val_right = stats.ttest_ind(control, pert)
+                
+                if p_val_left < p or p_val_right < p:
+                    sig_p += [1]
+                    sig_n += [n]
+                else:
+                    sig_p += [0]
             else:
-                sig_p += [0]
-        
+                control_trials = [t for t in self.i_good_non_stim_trials]
+                pert_trials = [t for t in self.i_good_stim_trials]
+                
+                control_left = self.get_spike_rate(n, period, control_trials, mean=False)
+                pert_left = self.get_spike_rate(n, period, pert_trials, mean=False)
+                # diff = np.abs(control_left - pert_left)
+                
+                # all_sus += [np.sum(diff)]
+    
+                tstat_left, p_val_left = stats.ttest_ind(control_left, pert_left)
+                
+                if p_val_left < p:
+                    sig_p += [1]
+                    sig_n += [n]
+                    
+                    all_tstat += [tstat_left]
+                    
+                else:
+                    sig_p += [0]
+                
         if return_n:
-            return sig_n
+            return sig_n, all_tstat
         return all_sus, sig_p
             
             
