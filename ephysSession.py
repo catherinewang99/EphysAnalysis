@@ -101,7 +101,9 @@ class Session:
             self.good_neurons = self.R_alm_idx
 
         if only_ppyr:
+            oldn = len(self.good_neurons)
             self.good_neurons = [n for n in self.good_neurons if n in np.where(self.celltype == 3)[0]]
+            print('only ppyr neurons: {} --> {}'.format(oldn, len(self.good_neurons)))
 
         self.side = side
         
@@ -1354,6 +1356,7 @@ class Session:
     def susceptibility(self, stimside, p=0.01,
                        period=None, return_n=False,
                        by_trial_type = False,
+                       provide_trials = [],
                        binsize=400, timestep=10):
         """
         Calculates the per neuron susceptibility to perturbation, measured as a
@@ -1400,9 +1403,13 @@ class Session:
                 else:
                     sig_p += [0]
             else:
-                control_trials = [t for t in self.i_good_non_stim_trials]
-                pert_trials = [t for t in self.i_good_stim_trials]
-                
+                if len(provide_trials) == 0:
+                    control_trials = [t for t in self.i_good_non_stim_trials]
+                    pert_trials = [t for t in self.i_good_stim_trials]
+                else:
+                    
+                    control_trials, pert_trials = provide_trials
+                    
                 control_left = self.get_spike_rate(n, period, control_trials, mean=False)
                 pert_left = self.get_spike_rate(n, period, pert_trials, mean=False)
                 # diff = np.abs(control_left - pert_left)

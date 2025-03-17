@@ -12,7 +12,7 @@ import numpy as np
 import scipy.io as scio
 import matplotlib.pyplot as plt
 from ephysSession import Session
-import behavior
+# import behavior
 cat = np.concatenate
 plt.rcParams['pdf.fonttype'] = '42' 
 from activitymode import Mode
@@ -111,4 +111,103 @@ plt.show()
 
 #%% LOok at single neuron PSTH
 
+s1.plot_raster_and_PSTH(168, opto=True, stimside='L')
+
+
+#%% Within session control
+p_s=0.01
+p=0.01
+retained_sample = []
+recruited_sample = []
+retained_delay = []
+recruited_delay = []
+dropped_delay = []
+dropped_sample = []
+alls1list, alld1, allr1, allns1 = [],[],[],[] # s1: susc ns: non susc
+
+learning_SDR = []
+expert_SDR = []
+
+for paths in expert_path: # For each mouse/FOV
+    ret_s = []
+    recr_s = []
+    ret_d, recr_d = [],[]
+    drop_d, drop_s = [], []
+    
+    s1list, d1, r1, ns1 = np.zeros(4),np.zeros(4),np.zeros(4),np.zeros(4)
+    
+    p_s = 0.01
+    s1 = Session(paths, side='R')
+
+    stim_period = (s1.delay+0, s1.delay+1)
+    
+    
+    
+    good_non_stim_trials_set = set(s1.i_good_non_stim_trials)
+    good_stim_trials_set = set(s1.i_good_stim_trials)
+        
+    control_trials_left = np.random.permutation([t for t in s1.L_trials if t in good_non_stim_trials_set])
+    pert_trials_left = np.random.permutation([t for t in s1.L_trials if t in good_stim_trials_set])
+    
+    control_trials_right = np.random.permutation([t for t in s1.R_trials if t in good_non_stim_trials_set])
+    pert_trials_right = np.random.permutation([t for t in s1.R_trials if t in good_stim_trials_set])
+    
+    L_trials_ctl_first, L_trials_ctl_second = control_trials_left[:int(len(control_trials_left) / 2)], control_trials_left[int(len(control_trials_left) / 2):]
+    L_trials_opto_first, L_trials_opto_second = pert_trials_left[:int(len(pert_trials_left) / 2)], pert_trials_left[int(len(pert_trials_left) / 2):]
+    
+    R_trials_ctl_first, R_trials_ctl_second = control_trials_right[:int(len(control_trials_right) / 2)], control_trials_right[int(len(control_trials_right) / 2):]
+    R_trials_opto_first, R_trials_opto_second = pert_trials_right[:int(len(pert_trials_right) / 2)], pert_trials_right[int(len(pert_trials_right) / 2):]
+
+    naive_sample_sel, tstat = s1.susceptibility(stimside= 'L', period = stim_period, p=p_s, return_n=True,
+                                            provide_trials = (cat((L_trials_ctl_first, R_trials_ctl_first)),
+                                                              cat((L_trials_opto_first, R_trials_opto_first))))
+    
+    naive_sample_sel = [naive_sample_sel[n] for n in range(len(naive_sample_sel)) if tstat[n] < 0]
+    naive_nonsel = [n for n in s1.good_neurons if n not in naive_sample_sel] # non susc population
+
+    exp_susc, tstat = s1.susceptibility(stimside= 'L', period = stim_period, p=p_s, return_n=True,
+                                    provide_trials = (cat((L_trials_ctl_second, R_trials_ctl_second)),
+                                                      cat((L_trials_opto_second, R_trials_opto_second))))
+    exp_susc = [exp_susc[n] for n in range(len(exp_susc)) if tstat[n] < 0]
+
+    # Get functional group info
+    
+    
+    for n in naive_sample_sel:
+        if n in exp_susc:
+            s1list[0] += 1
+            # ret_s += [(n, s2.good_neurons[np.where(s1.good_neurons == n)[0][0]])]
+
+        else:
+            s1list[3] += 1
+            # drop_s += [(n, s2.good_neurons[np.where(s1.good_neurons == n)[0][0]])]
+
+    
+    for n in naive_nonsel:
+        if n in exp_susc:
+            ns1[0] += 1
+            # recr_s += [(n, s2.good_neurons[np.where(s1.good_neurons ==n)[0][0]])]
+
+        else:
+            ns1[3] += 1
+    print(s1list)
+
+    s1list, d1, r1, ns1 = s1list / len(s1.good_neurons), d1 / len(s1.good_neurons), r1 / len(s1.good_neurons), ns1 / len(s1.good_neurons)
+
+    alls1list += [s1list]
+    alld1 += [d1]
+    allr1 += [r1] 
+    allns1 += [ns1]
+    
+    retained_sample += [ret_s]
+    recruited_sample += [recr_s]
+    dropped_sample += [drop_s]
+    retained_delay += [ret_d]
+    recruited_delay += [recr_d]
+    dropped_delay += [drop_d]
+
+alls1list = np.mean(alls1list, axis=0) 
+alld1 = np.mean(alld1, axis=0)
+allr1 = np.mean(allr1, axis=0)
+allns1 = np.mean(allns1, axis=0)
 
