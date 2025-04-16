@@ -7,16 +7,17 @@ Analyze ephys behavior
 
 @author: catherinewang
 """
+import sys
+sys.path.append("C:\scripts\Ephys analysis\ephys_pipeline")
 
 import numpy as np
 import scipy.io as scio
 import matplotlib.pyplot as plt
-# import session
+
 import behavior
 import sys
 cat = np.concatenate
 plt.rcParams['pdf.fonttype'] = '42' 
-sys.path.append("C:\scripts\Ephys analysis\ephys_pipeline")
 
 from ephysSession import Session
 
@@ -26,23 +27,26 @@ from ephysSession import Session
 # b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW48\python_behavior', behavior_only=True)
 # b.learning_progression(window = 50)
 
-# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW49\python_behavior', behavior_only=True)
-# b.learning_progression(window = 50,  color_background=range(32-6)) # All but the last 6 days
+b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW49\python_behavior', behavior_only=True)
+b.learning_progression(window = 50,  color_background=range(15)) # All but the last 6 days
 
-# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW53\python_behavior', behavior_only=True)
-# b.learning_progression(window = 75, color_background=range(36))
+b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW53\python_behavior', behavior_only=True)
+b.learning_progression(window = 75, color_background=range(36))
 
 b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW59\python_behavior', behavior_only=True)
-b.learning_progression(window = 75, color_background=range(12))
+b.learning_progression(window = 75, color_background=range(22))
 
-# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW61\python_behavior', behavior_only=True)
-# b.learning_progression(window = 75, color_background=range(12))
+b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW61\python_behavior', behavior_only=True)
+b.learning_progression(window = 75, color_background=range(36))
+
+b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW63\python_behavior', behavior_only=True)
+b.learning_progression(window = 75, color_background=range(17))
 
 # b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW54t\python_behavior', behavior_only=True)
 # b.learning_progression(window = 75)#, color_background=range(31))
 
-# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW54\python_behavior', behavior_only=True)
-# b.learning_progression(window = 50, color_background=range(24))
+b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW54\python_behavior', behavior_only=True)
+b.learning_progression(window = 50, color_background=range(25))
 
 # b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW62\python_behavior', behavior_only=True)
 # b.learning_progression(window = 50, color_background=range(4))
@@ -177,6 +181,7 @@ ephys_paths = [
     r'J:\ephys_data\Behavior data\CW54\python_behavior',
     r'J:\ephys_data\Behavior data\CW59\python_behavior',
     r'J:\ephys_data\Behavior data\CW61\python_behavior',
+    r'J:\ephys_data\Behavior data\CW63\python_behavior',
     # r'J:\ephys_data\Behavior data\CW62\python_behavior',
     # r'J:\ephys_data\Behavior data\CW60\python_behavior',
 
@@ -206,11 +211,112 @@ plt.title('Time to reach {}% performance at <{}s delay'.format(performance*100, 
 
 
 
+#%% Plot performance in recording sessions only
 
 
+expert_paths = [
+    
+    r'J:\ephys_data\Behavior data\CW49\python_behavior',
+    r'J:\ephys_data\Behavior data\CW53\python_behavior',
+    r'J:\ephys_data\Behavior data\CW59\python_behavior',
+
+    ]
+expert_sess = [(15,21), (36,42), (22,29)]
+
+learning_paths = [
+    r'J:\ephys_data\Behavior data\CW54\python_behavior',
+    r'J:\ephys_data\Behavior data\CW61\python_behavior',
+    r'J:\ephys_data\Behavior data\CW63\python_behavior',
+    ]
+learning_sess = [(25,28), (36,42), (17,24)]
+
+window=75
+
+learning_accs = []
+for idx in range(len(learning_paths)):
+    b = behavior.Behavior(learning_paths[idx], behavior_only=True)
+    _, acc, _ = b.get_acc_EL(window = window, sessions=learning_sess[idx])
+    learning_accs += [acc]
+
+expert_accs = []
+for idx in range(len(expert_paths)):
+    b = behavior.Behavior(expert_paths[idx], behavior_only=True)
+    _, acc, _ = b.get_acc_EL(window = window, sessions=expert_sess[idx])
+    expert_accs += [acc]
 
 
+f, ax = plt.subplots(1,2,figsize=(15,5), sharey='row')
 
+for i in range(3):
+    ax[0].plot(range(len(learning_accs[i])), learning_accs[i], color='blue')
+    ax[1].plot(range(len(expert_accs[i])), expert_accs[i], color='green')
+for i in range(2):
+    ax[i].axhline(0.5, ls = '--', color='grey')
+    ax[i].axhline(0.7, ls = '--', color='grey')
+ax[0].set_title('Learning')
+ax[1].set_title('Expert')
+ax[0].set_ylabel('Behavior performance')
+ax[0].set_xlabel('Trials')
+
+f = plt.figure()
+for i in range(3):
+    plt.plot(range(len(learning_accs[i])), learning_accs[i], color='blue', alpha=0.75)
+    plt.plot(range(len(expert_accs[i])), expert_accs[i], color='green', alpha=0.75)
+plt.axhline(0.5, ls = '--', color='grey')
+plt.axhline(0.7, ls = '--', color='grey')
+plt.ylabel('Behavior performance')
+plt.xlabel('Trials')
+
+#%% Filter out bad behavior using sliding window threshold? visualize the results
+
+
+def find_all_consecutive_segments(arr, threshold, count=10):
+    is_below = arr < threshold
+
+    start_indices = []
+    all_indices = []
+    ranges = []
+
+    start = None
+    for i, val in enumerate(is_below):
+        if val:
+            if start is None:
+                start = i
+        else:
+            if start is not None and (i - start) >= count:
+                start_indices.append(start)
+                all_indices.extend(range(start, i))
+                ranges.append((start, i - 1))
+            start = None
+
+    # Handle trailing run
+    if start is not None and (len(arr) - start) >= count:
+        start_indices.append(start)
+        all_indices.extend(range(start, len(arr)))
+        ranges.append((start, len(arr) - 1))
+
+    return np.array(start_indices), np.array(all_indices), ranges
+
+
+window=20
+path = r'J:\ephys_data\Behavior data\CW63\python_behavior'
+b = behavior.Behavior(path, behavior_only=True)
+learning_accs = []
+for i in range(17,24):
+    _, acc, _ = b.get_acc_EL(window = window, sessions=(i,i+1))
+    learning_accs += [acc]
+
+start_idxs, all_idxs, span_ranges = find_all_consecutive_segments(cat(learning_accs), 0.55, 15)
+
+plt.plot(range(len(cat(learning_accs))), cat(learning_accs), color='green')
+for start,end in span_ranges:
+    plt.plot(np.arange(start,end), cat(learning_accs)[np.arange(start,end)], color='red')
+
+# draw session boundaries
+counter = 0
+for i in range(len(learning_accs)):
+    counter += len(learning_accs[i])
+    plt.axvline(counter, ls='--', color='grey')
 
 
 

@@ -367,7 +367,8 @@ class Behavior():
         # JH Plot
         return None
 
-    def learning_progression(self, window = 50, save=False, imaging=False, return_results=False, include_delay = True, color_background = []):
+    def learning_progression(self, window = 50, save=False, imaging=False,
+                             return_results=False, include_delay = True, color_background = []):
         """
         Plot the learning progression with three panels indicating delay duration, performance,
         and early lick rate over sessions

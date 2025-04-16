@@ -104,6 +104,8 @@ class Session:
             oldn = len(self.good_neurons)
             self.good_neurons = [n for n in self.good_neurons if n in np.where(self.celltype == 3)[0]]
             print('only ppyr neurons: {} --> {}'.format(oldn, len(self.good_neurons)))
+            self.L_alm_idx = [n for n in self.L_alm_idx if n in self.good_neurons]
+            self.R_alm_idx = [n for n in self.R_alm_idx if n in self.good_neurons]
 
         self.side = side
         
@@ -162,7 +164,7 @@ class Session:
         self.stim_ON = cat(behavior['StimDur_tmp']) > 0
         
         self.i_good_trials = cat(behavior['i_good_trials']) - 1 # zero indexing in python
-        
+        self.filter_low_performance()        
 
         
         # Take out non stable trials from igoodtrials
@@ -185,11 +187,96 @@ class Session:
                 self.stim_side = np.where(x_galvo < 0, 'L', 'R')
             elif laser == 'red':
                 self.stim_side = np.full(self.num_trials, 'L')
+                
+        self.i_good_R_stim_trials = [t for t in self.i_good_trials if self.stim_side[t] == 'R' and self.stim_ON[t] and not self.early_lick[t]]
+        self.i_good_L_stim_trials = [t for t in self.i_good_trials if self.stim_side[t] == 'L' and self.stim_ON[t] and not self.early_lick[t]]
+
         
         # Re-adjust with i good trials
         self.stim_trials = np.where(self.stim_ON)[0]
         
+        
     ### BEHAVIOR ONLY FUNCTIONS ###
+    
+    def get_acc_conv(self, window = 50):
+        """Returns agg accuracy over all sessions
+        
+        Parameters
+        -------
+        window : int
+        imaging : bool
+        sessions : tuple, optional
+            if provided, use these session for the return array
+    
+        Returns
+        -------
+        int
+            int corresponding to the length of shortest trial in whole session
+        """
+        # Concatenate all sessions
+        correctarr = np.array([])
+        earlylicksarr = np.array([])
+        num_trials = []
+        window = int(window/2)
+
+        
+        correct = self.L_correct + self.R_correct
+        correct = np.convolve(correct, np.ones(window*2)/(window*2), mode = 'same')
+        correctarr = np.append(correctarr, correct[window:-window])
+        
+        earlylicks = np.convolve(self.early_lick, np.ones(window*2)/(window*2), mode = 'same')
+        earlylicksarr = np.append(earlylicksarr, earlylicks[window:-window])
+          
+        return earlylicksarr, correctarr, cat(([0], num_trials))
+    
+    
+    def find_all_consecutive_segments(self, arr, threshold, count=10):
+        is_below = arr < threshold
+
+        start_indices = []
+        all_indices = []
+        ranges = []
+
+        start = None
+        for i, val in enumerate(is_below):
+            if val:
+                if start is None:
+                    start = i
+            else:
+                if start is not None and (i - start) >= count:
+                    start_indices.append(start)
+                    all_indices.extend(range(start, i))
+                    ranges.append((start, i - 1))
+                start = None
+
+        # Handle trailing run
+        if start is not None and (len(arr) - start) >= count:
+            start_indices.append(start)
+            all_indices.extend(range(start, len(arr)))
+            ranges.append((start, len(arr) - 1))
+
+        return np.array(start_indices), np.array(all_indices), ranges
+    
+    def filter_low_performance(self, threshold=0.55, consec_len=15):
+        """
+        Filter out the low performing trials from i_good_trials
+
+        Parameters
+        ----------
+         : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        _, correctarr, _ = self.get_acc_conv(window=20)
+        start_idxs, all_idxs, span_ranges = self.find_all_consecutive_segments(correctarr, threshold, consec_len)
+        trials = self.i_good_trials[~np.isin(self.i_good_trials, all_idxs)]
+        print("Remove {} trials from session for bad behavior".format(len(all_idxs)))
+        self.i_good_trials = trials
     
     def performance_in_trials(self, trials):
         """
