@@ -58,7 +58,9 @@ all_expert_paths = [[
                     
                     [r'G:\ephys_data\CW59\python\2025_02_22',
                      r'G:\ephys_data\CW59\python\2025_02_24',
+                     r'G:\ephys_data\CW59\python\2025_02_25',
                      r'G:\ephys_data\CW59\python\2025_02_26',
+                     r'G:\ephys_data\CW59\python\2025_02_28',
                      ]]
 
 all_naive_paths = [
@@ -71,6 +73,7 @@ all_naive_paths = [
         r'J:\ephys_data\CW48\python\2024_11_04',
         r'J:\ephys_data\CW48\python\2024_11_05',
         r'J:\ephys_data\CW48\python\2024_11_06',],
+        
                    [r'H:\ephys_data\CW47\python\2024_10_17',
           r'H:\ephys_data\CW47\python\2024_10_18',
           # r'H:\ephys_data\CW47\python\2024_10_19',
@@ -80,6 +83,7 @@ all_naive_paths = [
           # r'H:\ephys_data\CW47\python\2024_10_23',
           r'H:\ephys_data\CW47\python\2024_10_24',
           r'H:\ephys_data\CW47\python\2024_10_25',],
+                   
                    [r'G:\ephys_data\CW65\python\2025_02_25',],
                     ]
 
@@ -208,9 +212,9 @@ stim_spk, ctl_spk = [],[]
 
 for path in cat(all_learning_paths):
     s1 = Session(path, passive=False)#, side='R')
-    sided_neurons = s1.R_alm_idx
+    sided_neurons = s1.L_alm_idx
     
-    stim_trials = s1.i_good_R_stim_trials
+    stim_trials = s1.i_good_L_stim_trials
     window = (0.570 + 1.3 + 0.5, 0.570 + 1.3 + 1) # First second of delay
     
     for n in sided_neurons:
@@ -227,6 +231,47 @@ plt.plot([0, max(ctl_spk)], [0, max(ctl_spk)], ls='--', color='black')
 plt.ylabel('Photoinhibition (spks/s)')
 plt.xlabel('Control (spks/s)')
 plt.show()
+
+
+#%% Variable effect of stim over trials?
+
+# For one session, plot effect of stim over trials per neuron?
+s1 = Session(path, passive=False)#, side='R')
+sided_neurons = s1.L_alm_idx
+stim_trials = s1.i_good_L_stim_trials
+# stim_trials = s1.i_good_non_stim_trials
+window = (0.570 + 1.3 + 0.5, 0.570 + 1.3 + 1) # First second of delay
+
+stim_spk = []
+for n in sided_neurons:
+    n_spk = []
+    for t in stim_trials:
+        n_spk += [s1.get_spike_rate(n, window, [t])]
+    stim_spk += [n_spk]
+
+f=plt.figure(figsize=(10,10))
+for i in range(len(sided_neurons)):
+    plt.scatter(np.ones(len(stim_trials)) * i, stim_spk[i])
+plt.ylabel('spk rate across trials')
+plt.xlabel('neurons')
+plt.show()
+
+
+f=plt.figure(figsize=(10,10))
+for i in range(len(stim_trials)):
+    plt.scatter(np.ones(len(sided_neurons)) * i, np.array(stim_spk)[:,i])
+plt.ylabel('spk rate across neurons')
+plt.xlabel('trials')
+plt.show()
+
+
+# alternatively, look at the variance across trials vs across neurons
+neuron_variance = np.var(stim_spk, axis=1)
+trial_variance = np.var(stim_spk, axis=0)
+    
+plt.scatter(np.zeros(len(neuron_variance)), neuron_variance)
+plt.scatter(np.ones(len(trial_variance)), trial_variance)
+plt.xticks([0,1],['Neuron variance', 'Trial variance'])
 
 #%% Effect of stim olds
 

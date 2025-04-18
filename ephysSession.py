@@ -54,7 +54,8 @@ class Session:
 
     """
     def __init__(self, path, side = 'all', stimside = 'all',
-                 passive=False, laser='blue', only_ppyr=True):
+                 passive=False, laser='blue', only_ppyr=True,
+                 filter_low_perf=True):
         
 
         """
@@ -164,7 +165,8 @@ class Session:
         self.stim_ON = cat(behavior['StimDur_tmp']) > 0
         
         self.i_good_trials = cat(behavior['i_good_trials']) - 1 # zero indexing in python
-        self.filter_low_performance()        
+        if filter_low_perf:
+            self.filter_low_performance()        
 
         
         # Take out non stable trials from igoodtrials
@@ -1119,6 +1121,7 @@ class Session:
     def get_number_selective(self, epoch, mode, p=0.05):
         """
         Get the number of selective neurons in a given epoch for a give mode
+        using a simple t-test
 
         Parameters
         ----------
@@ -1145,9 +1148,135 @@ class Session:
             return
         
         return len(n)
-        
     
-    def screen_preference(self, neuron_num, epoch, bootstrap=False, samplesize = 25, 
+    def shuffle_test_fast(self, spikes_A, spikes_B, n_shuffles=1000):
+        """Fast shuffle test using precomputed spike arrays (1D arrays)"""
+        all_spikes = np.concatenate([spikes_A, spikes_B])
+        n_A = len(spikes_A)
+        n_B = len(spikes_B)
+        total = n_A + n_B
+        actual_prob, _ = self.compute_preference_probability(spikes_A, spikes_B)
+    
+        if n_A == 0 or n_B == 0:
+            return np.nan, np.nan
+    
+        # Use numpy for fast shuffling
+        shuffle_probs = np.empty(n_shuffles)
+        for i in range(n_shuffles):
+            idx = np.random.permutation(total)
+            shuffled_A = all_spikes[idx[:n_A]]
+            shuffled_B = all_spikes[idx[n_A:]]
+            shuffle_probs[i], _ = self.compute_preference_probability(shuffled_A, shuffled_B)
+    
+        p_val = np.mean(shuffle_probs >= actual_prob)
+        return actual_prob, p_val
+        
+    def shuffle_test(self, neuron, trials_A, trials_B, time_bin, n_shuffles=1000):
+        all_trials = np.array(trials_A + trials_B)
+        labels = np.array([1] * len(trials_A) + [0] * len(trials_B))
+    
+        spikes_A = self.get_spike_count(neuron, time_bin, trials_A)
+        spikes_B = self.get_spike_count(neuron, time_bin, trials_B)
+    
+        actual_prob, _ = self.compute_preference_probability(spikes_A, spikes_B)
+    
+        shuffle_probs = []
+        for _ in range(n_shuffles):
+            np.random.shuffle(labels)
+            shuffled_A = all_trials[labels == 1]
+            shuffled_B = all_trials[labels == 0]
+            spikes_A_shuf = self.get_spike_count(neuron, time_bin, shuffled_A)
+            spikes_B_shuf = self.get_spike_count(neuron, time_bin, shuffled_B)
+            prob_shuf, _ = self.compute_preference_probability(spikes_A_shuf, spikes_B_shuf)
+            shuffle_probs.append(prob_shuf)
+    
+        p_val = np.mean(np.array(shuffle_probs) >= actual_prob)
+        return actual_prob, p_val
+
+        
+    def count_significant_neurons_by_time(self, neurons, mode='stimulus', alpha=0.05, n_shuffles=1000):
+        """Return array of significant neuron counts per time bin        
+            Get the number of selective neurons in a given epoch for a give mode
+            using a shuffle test (Chen et al 2021)
+    
+            Parameters
+            ----------
+            epoch : TYPE
+                DESCRIPTION.
+            mode : string
+                'Stimulus' or 'Choice' will use diff trial type groupings.
+            p : TYPE, optional
+                DESCRIPTION. The default is 0.05.
+    
+            Returns
+            -------
+            Number of selective neurons per epoch.
+            a given mode."""
+        
+        neurons = np.array(neurons)
+        self.CR_trials = [i for i in np.where(self.R_correct)[0] if i in self.i_good_non_stim_trials]
+        self.EL_trials = [i for i in np.where(self.L_wrong)[0] if i in self.i_good_non_stim_trials]
+        self.ER_trials = [i for i in np.where(self.R_wrong)[0] if i in self.i_good_non_stim_trials]
+        self.CL_trials = [i for i in np.where(self.L_correct)[0] if i in self.i_good_non_stim_trials]
+    
+        mode_pairs = {
+               'stimulus': [('CR', 'EL'), ('ER', 'CL')],
+               'choice': [('CR', 'ER'), ('EL', 'CL')],
+               'outcome': [('CR', 'ER'), ('CL', 'EL')],
+           }
+            
+        if mode not in mode_pairs:
+            raise ValueError(f"Unsupported mode: {mode}")
+    
+        comparisons = mode_pairs[mode]
+        self.time_bins =  [(i, i+0.2) for i in np.arange(-0.2, self.time_cutoff, 0.2)]
+        sig_counts = np.zeros(len(self.time_bins), dtype=int)
+    
+        for time_idx, time_window in enumerate(self.time_bins):
+            sig_neurons = 0
+    
+            # Cache spike counts per neuron per trial group for this time window
+            spike_cache = {
+                neuron: {
+                    group_name: np.array(self.get_spike_count(neuron, time_window, getattr(self, f"{group_name}_trials")))
+                    for group_name in ['CR', 'EL', 'ER', 'CL']
+                } for neuron in neurons
+            }
+            
+            for neuron in neurons:
+                for group_A_name, group_B_name in comparisons:
+                    spikes_A = spike_cache[neuron][group_A_name]
+                    spikes_B = spike_cache[neuron][group_B_name]
+    
+                    _, p_val = self.shuffle_test_fast(spikes_A, spikes_B, n_shuffles=n_shuffles)
+    
+                    if not np.isnan(p_val) and p_val < alpha:
+                        sig_neurons += 1
+                        break  # move on to next neuron once one comparison is significant
+    
+            sig_counts[time_idx] = sig_neurons
+    
+        return sig_counts
+
+
+    def compute_preference_probability(self, group_A, group_B):
+        A = np.array(group_A)
+        B = np.array(group_B)
+        total = len(A) * len(B)
+        if total == 0:
+            return np.nan, None
+    
+        comp_A = np.sum(A[:, None] > B[None, :]) / total
+        comp_B = np.sum(B[:, None] > A[None, :]) / total
+    
+        if comp_A >= comp_B:
+            return comp_A, 'A'
+        else:
+            return comp_B, 'B'
+
+            
+    
+    def screen_preference(self, neuron_num, epoch, bootstrap=False, samplesize = 20, 
                           lickdir=False, return_remove=False):
         """Determine if a neuron is left or right preferring
                 
@@ -1189,8 +1318,8 @@ class Session:
         
         # Skip neuron if less than 15
         if len(l_trials) < samplesize or len(r_trials) < samplesize:
-            print("There are fewer than 15 trials R/L: {} R trials and {} L trials".format(len(l_trials), len(r_trials)))
-            samplesize = 5
+            print("There are fewer than {} trials R/L: {} R trials and {} L trials".format(samplesize, len(l_trials), len(r_trials)))
+            samplesize = min(len(l_trials), len(r_trials))
         
         if bootstrap:
             pref = 0
@@ -1237,7 +1366,8 @@ class Session:
                          epoch=None, opto=False,
                          binsize=50, timestep=1,
                          downsample=False, bootstrap = False, 
-                         lickdir=True, return_pref_np = True):
+                         correct_only=True,
+                         lickdir=False, return_pref_np = True):
     
         """
         Plots or returns a single line representing selectivity of given 
@@ -1268,52 +1398,68 @@ class Session:
 
         allpref, allnonpref = [], []
         for n in neurons:
-
-            L_pref, screenl, screenr = self.screen_preference(n, epoch, bootstrap=bootstrap)
-            
-            l_control_trials = self.trial_type_direction('l') if not lickdir else self.lick_actual_direction('l')            
-            r_control_trials = self.trial_type_direction('r') if not lickdir else self.lick_actual_direction('r')
-            
-            if not bootstrap:
-                all_exclude_trials = cat((screenl, screenr))
-                l_control_trials = [i for i in l_control_trials if i not in all_exclude_trials]
-                r_control_trials = [i for i in r_control_trials if i not in all_exclude_trials]
+            if bootstrap:
+                L_pref, screenl, screenr = self.screen_preference(n, epoch, bootstrap=bootstrap)
                 
-            # l_opto_trials = [i for i in l_control_trials if i in self.stable_trials[n] and self.stim_ON[i]]
-            # r_opto_trials = [i for i in r_control_trials if i in self.stable_trials[n] and self.stim_ON[i]]
-            
-            # l_opto_trials_stim_left = [i for i in l_opto_trials if self.stim_side[i] == 'L']
-            # r_opto_trials_stim_left = [i for i in r_opto_trials if self.stim_side[i] == 'L']
-            
-            # l_opto_trials_stim_right = [i for i in l_opto_trials if self.stim_side[i] == 'R'] 
-            # r_opto_trials_stim_right = [i for i in r_opto_trials if self.stim_side[i] == 'R'] 
-            
-            l_control_trials = [i for i in l_control_trials if i in self.stable_trials[n] and not self.stim_ON[i]]
-            r_control_trials = [i for i in r_control_trials if i in self.stable_trials[n] and not self.stim_ON[i]]    
-            
-
-        
-            if L_pref:
-                pref, time,_ = self.get_PSTH(n, l_control_trials, binsize=binsize, timestep=timestep)
-                nonpref,_,_ = self.get_PSTH(n, r_control_trials, binsize=binsize, timestep=timestep)
-                # optop_stim_left,_,_ = self.get_PSTH(n, l_opto_trials_stim_left, binsize=binsize, timestep=timestep)
-                # optonp_stim_left,_,_ = self.get_PSTH(n, r_opto_trials_stim_left, binsize=binsize, timestep=timestep)
-                # optop_stim_right,_,_ = self.get_PSTH(n, l_opto_trials_stim_right, binsize=binsize, timestep=timestep)
-                # optonp_stim_right,_,_ = self.get_PSTH(n, r_opto_trials_stim_right, binsize=binsize, timestep=timestep)
+                l_control_trials = self.trial_type_direction('l') if not lickdir else self.lick_actual_direction('l')            
+                r_control_trials = self.trial_type_direction('r') if not lickdir else self.lick_actual_direction('r')
+      
+                l_control_trials = [i for i in l_control_trials if i in self.stable_trials[n] and not self.stim_ON[i]]
+                r_control_trials = [i for i in r_control_trials if i in self.stable_trials[n] and not self.stim_ON[i]]    
                 
+                if L_pref:
+                    pref, time,_ = self.get_PSTH(n, l_control_trials, binsize=binsize, timestep=timestep)
+                    nonpref,_,_ = self.get_PSTH(n, r_control_trials, binsize=binsize, timestep=timestep)
+    
+                else:
+                    pref, time,_ = self.get_PSTH(n, r_control_trials, binsize=binsize, timestep=timestep)
+                    nonpref,_,_ = self.get_PSTH(n, l_control_trials, binsize=binsize, timestep=timestep)
+    
+    
+                allpref += [pref]
+                allnonpref += [nonpref]
             else:
-                pref, time,_ = self.get_PSTH(n, r_control_trials, binsize=binsize, timestep=timestep)
-                nonpref,_,_ = self.get_PSTH(n, l_control_trials, binsize=binsize, timestep=timestep)
-                # optop_stim_left,_,_ = self.get_PSTH(n, r_opto_trials_stim_left, binsize=binsize, timestep=timestep)
-                # optonp_stim_left,_,_ = self.get_PSTH(n, l_opto_trials_stim_left, binsize=binsize, timestep=timestep)
-                # optop_stim_right,_,_ = self.get_PSTH(n, r_opto_trials_stim_right, binsize=binsize, timestep=timestep)
-                # optonp_stim_right,_,_ = self.get_PSTH(n, l_opto_trials_stim_right, binsize=binsize, timestep=timestep)
+                n_pref, n_nonpref = [],[]
+                # start = time_.time()
+
+                for _ in range(30):
+
+                    L_pref, screenl, screenr = self.screen_preference(n, epoch, bootstrap=bootstrap)
+
+                    if correct_only:
+                        
+                        l_control_trials = self.lick_correct_direction('l') 
+                        r_control_trials = self.lick_correct_direction('r')
+                        
+                    else:
+                        
+                        l_control_trials = self.trial_type_direction('l') if not lickdir else self.lick_actual_direction('l')            
+                        r_control_trials = self.trial_type_direction('r') if not lickdir else self.lick_actual_direction('r')
                 
-            # control_sel += [pref-nonpref]
-            # opto_sel_stim_left += [optop_stim_left-optonp_stim_left]
-            # opto_sel_stim_right += [optop_stim_right-optonp_stim_right]
-            allpref += [pref]
-            allnonpref += [nonpref]
+                
+                    all_exclude_trials = cat((screenl, screenr))
+                    l_control_trials = [i for i in l_control_trials if i not in all_exclude_trials]
+                    r_control_trials = [i for i in r_control_trials if i not in all_exclude_trials]
+        
+                    l_control_trials = [i for i in l_control_trials if i in self.stable_trials[n] and not self.stim_ON[i]]
+                    r_control_trials = [i for i in r_control_trials if i in self.stable_trials[n] and not self.stim_ON[i]]    
+                    
+                    if L_pref:
+                        pref, time,_ = self.get_PSTH(n, l_control_trials, binsize=binsize, timestep=timestep)
+                        nonpref,_,_ = self.get_PSTH(n, r_control_trials, binsize=binsize, timestep=timestep)
+        
+                    else:
+                        pref, time,_ = self.get_PSTH(n, r_control_trials, binsize=binsize, timestep=timestep)
+                        nonpref,_,_ = self.get_PSTH(n, l_control_trials, binsize=binsize, timestep=timestep)
+        
+                    
+                    n_pref += [pref]
+                    n_nonpref += [nonpref]
+                    
+                # print(time_.time() - start)
+                    
+                allpref += [np.mean(n_pref, axis=0)]
+                allnonpref += [np.mean(n_nonpref, axis=0)]
             
         if plot:
             # plt.plot(range(self.time_cutoff), sel, 'b-')

@@ -75,12 +75,16 @@ performance_ctl_right, performance_ctl_left = [], []
 
 fig = plt.figure()
 
-for path in paths:
-    s1 = Session(path, passive=False)
-    all_stim_trials = np.where(s1.stim_ON)[0]
-    left_stim_trials = [i for i in np.where(s1.stim_side == 'L')[0] if i in all_stim_trials]
-    right_stim_trials = [i for i in np.where(s1.stim_side == 'R')[0] if i in all_stim_trials]
-    control_trials = np.where(~s1.stim_ON)[0]
+for path in cat(all_learning_paths):
+    s1 = Session(path, passive=False, filter_low_perf=True)
+    # all_stim_trials = np.where(s1.stim_ON)[0]
+    # left_stim_trials = [i for i in np.where(s1.stim_side == 'L')[0] if i in all_stim_trials]
+    # right_stim_trials = [i for i in np.where(s1.stim_side == 'R')[0] if i in all_stim_trials]
+    # control_trials = np.where(~s1.stim_ON)[0]
+    
+    left_stim_trials = s1.i_good_L_stim_trials
+    right_stim_trials = s1.i_good_R_stim_trials
+    control_trials = s1.i_good_non_stim_trials
     
     perf_right, perf_left, perf_all = s1.performance_in_trials(left_stim_trials)
     performance_opto_left += [perf_all]
@@ -299,10 +303,10 @@ def find_all_consecutive_segments(arr, threshold, count=10):
 
 
 window=20
-path = r'J:\ephys_data\Behavior data\CW63\python_behavior'
+path = r'J:\ephys_data\Behavior data\CW54\python_behavior'
 b = behavior.Behavior(path, behavior_only=True)
 learning_accs = []
-for i in range(17,24):
+for i in range(25,28):
     _, acc, _ = b.get_acc_EL(window = window, sessions=(i,i+1))
     learning_accs += [acc]
 
@@ -317,6 +321,8 @@ counter = 0
 for i in range(len(learning_accs)):
     counter += len(learning_accs[i])
     plt.axvline(counter, ls='--', color='grey')
+    
+    
 
 
 

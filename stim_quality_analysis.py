@@ -23,26 +23,80 @@ from statsmodels.stats.proportion import proportions_ztest
 cat = np.concatenate
 ## Paths
 
-path = r'J:\ephys_data\CW49\python\2024_12_14'
+all_learning_paths = [[r'G:\ephys_data\CW63\python\2025_03_19',
+                      r'G:\ephys_data\CW63\python\2025_03_20',         
+                      r'G:\ephys_data\CW63\python\2025_03_22',         
+                      r'G:\ephys_data\CW63\python\2025_03_23',         
+                      r'G:\ephys_data\CW63\python\2025_03_25',],
+                      
+                      [r'G:\ephys_data\CW61\python\2025_03_08',
+                       r'G:\ephys_data\CW61\python\2025_03_09', 
+                       r'G:\ephys_data\CW61\python\2025_03_10', 
+                       r'G:\ephys_data\CW61\python\2025_03_11', 
+                       r'G:\ephys_data\CW61\python\2025_03_12', 
+                       r'G:\ephys_data\CW61\python\2025_03_14', 
+                       r'G:\ephys_data\CW61\python\2025_03_17', 
+                       r'G:\ephys_data\CW61\python\2025_03_18', 
+                       ],
+                      [r'J:\ephys_data\CW54\python\2025_02_01',
+                       r'J:\ephys_data\CW54\python\2025_02_03']
+                      ]
 
 
+all_expert_paths = [[
+                        # r'J:\ephys_data\CW49\python\2024_12_11',
+                        # r'J:\ephys_data\CW49\python\2024_12_12',
+                        r'J:\ephys_data\CW49\python\2024_12_13',
+                        r'J:\ephys_data\CW49\python\2024_12_14',
+                        r'J:\ephys_data\CW49\python\2024_12_15',
+                        r'J:\ephys_data\CW49\python\2024_12_16',
+                
+                          ],
+                    [
+                        r'J:\ephys_data\CW53\python\2025_01_27',
+                        r'J:\ephys_data\CW53\python\2025_01_28',
+                        r'J:\ephys_data\CW53\python\2025_01_29',
+                        r'J:\ephys_data\CW53\python\2025_01_30',
+                        r'J:\ephys_data\CW53\python\2025_02_01',
+                        r'J:\ephys_data\CW53\python\2025_02_02',
+                          ],
+                    
+                    [r'G:\ephys_data\CW59\python\2025_02_22',
+                     r'G:\ephys_data\CW59\python\2025_02_24',
+                     r'G:\ephys_data\CW59\python\2025_02_25',
+                     r'G:\ephys_data\CW59\python\2025_02_26',
+                     r'G:\ephys_data\CW59\python\2025_02_28',
+                     ]]
 
-paths = [
-            # r'J:\ephys_data\CW49\python\2024_12_11',
-            # r'J:\ephys_data\CW49\python\2024_12_12',
-            r'J:\ephys_data\CW49\python\2024_12_13',
-            r'J:\ephys_data\CW49\python\2024_12_14',
-            r'J:\ephys_data\CW49\python\2024_12_15',
-            r'J:\ephys_data\CW49\python\2024_12_16',
+all_naive_paths = [
+        [r'J:\ephys_data\CW48\python\2024_10_29',
+        r'J:\ephys_data\CW48\python\2024_10_30',
+        r'J:\ephys_data\CW48\python\2024_10_31',
+        r'J:\ephys_data\CW48\python\2024_11_01',
+        r'J:\ephys_data\CW48\python\2024_11_02',
+        r'J:\ephys_data\CW48\python\2024_11_03',
+        r'J:\ephys_data\CW48\python\2024_11_04',
+        r'J:\ephys_data\CW48\python\2024_11_05',
+        r'J:\ephys_data\CW48\python\2024_11_06',],
         
-        ]
-s1 = Session(path, passive=False)
+                   [r'H:\ephys_data\CW47\python\2024_10_17',
+          r'H:\ephys_data\CW47\python\2024_10_18',
+          # r'H:\ephys_data\CW47\python\2024_10_19',
+          r'H:\ephys_data\CW47\python\2024_10_20',
+          r'H:\ephys_data\CW47\python\2024_10_21',
+          r'H:\ephys_data\CW47\python\2024_10_22',
+          # r'H:\ephys_data\CW47\python\2024_10_23',
+          r'H:\ephys_data\CW47\python\2024_10_24',
+          r'H:\ephys_data\CW47\python\2024_10_25',],
+                   
+                   [r'G:\ephys_data\CW65\python\2025_02_25',],
+                    ]
 
 
 #%% Plot distribution of waveform withs
 
 values = []
-for path in paths:
+for path in cat(all_learning_paths):
     s1 = Session(path, passive=False)
     for n in range(s1.num_neurons):
         
@@ -57,11 +111,12 @@ plt.axvline(0.35, color='grey', ls = '--')
 plt.axvline(0.45, color='grey', ls = '--')
 plt.ylabel('Number of neurons')
 plt.xlabel('Spike trough-to-peak (ms)')
+
 #%% Plot waveforms by cell type: FS and ppyr
 celltypes = [3,1] # FS and ppyr
 
 f = plt.figure()
-for path in paths:
+for path in cat(all_learning_paths):
     s1 = Session(path, passive=False)
     for c in celltypes:
         neuron_cell_type = np.where(s1.celltype == c)[0]

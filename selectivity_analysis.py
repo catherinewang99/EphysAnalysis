@@ -18,23 +18,79 @@ from ephysSession import Session
 import behavior
 cat = np.concatenate
 plt.rcParams['pdf.fonttype'] = '42' 
+#%% PATHS
 
-#%% Aggregate over all FOVs for this analysis
+all_learning_paths = [[r'G:\ephys_data\CW63\python\2025_03_19',
+                      r'G:\ephys_data\CW63\python\2025_03_20',         
+                      r'G:\ephys_data\CW63\python\2025_03_22',         
+                      r'G:\ephys_data\CW63\python\2025_03_23',         
+                      r'G:\ephys_data\CW63\python\2025_03_25',],
+                      
+                      [r'G:\ephys_data\CW61\python\2025_03_08',
+                       r'G:\ephys_data\CW61\python\2025_03_09', 
+                       r'G:\ephys_data\CW61\python\2025_03_10', 
+                       r'G:\ephys_data\CW61\python\2025_03_11', 
+                       r'G:\ephys_data\CW61\python\2025_03_12', 
+                       r'G:\ephys_data\CW61\python\2025_03_14', 
+                       r'G:\ephys_data\CW61\python\2025_03_17', 
+                       r'G:\ephys_data\CW61\python\2025_03_18', 
+                       ],
+                      [r'J:\ephys_data\CW54\python\2025_02_01',
+                       r'J:\ephys_data\CW54\python\2025_02_03']
+                      ]
 
-paths = [
-            # r'J:\ephys_data\CW49\python\2024_12_11',
-            # r'J:\ephys_data\CW49\python\2024_12_12',
-            # r'J:\ephys_data\CW49\python\2024_12_13',
-            # r'J:\ephys_data\CW49\python\2024_12_14',
-            # r'J:\ephys_data\CW49\python\2024_12_15',
-            # r'J:\ephys_data\CW49\python\2024_12_16',
-            
-            # r'J:\ephys_data\CW53\python\2025_01_27',
-            # r'J:\ephys_data\CW53\python\2025_01_29',
-            # r'J:\ephys_data\CW53\python\2025_01_30',
-            r'J:\ephys_data\CW53\python\2025_02_02',
+
+all_expert_paths = [[
+                        # r'J:\ephys_data\CW49\python\2024_12_11',
+                        # r'J:\ephys_data\CW49\python\2024_12_12',
+                        r'J:\ephys_data\CW49\python\2024_12_13',
+                        r'J:\ephys_data\CW49\python\2024_12_14',
+                        r'J:\ephys_data\CW49\python\2024_12_15',
+                        r'J:\ephys_data\CW49\python\2024_12_16',
+                
+                          ],
+                    [
+                        r'J:\ephys_data\CW53\python\2025_01_27',
+                        r'J:\ephys_data\CW53\python\2025_01_28',
+                        r'J:\ephys_data\CW53\python\2025_01_29',
+                        r'J:\ephys_data\CW53\python\2025_01_30',
+                        r'J:\ephys_data\CW53\python\2025_02_01',
+                        r'J:\ephys_data\CW53\python\2025_02_02',
+                          ],
+                    
+                    [r'G:\ephys_data\CW59\python\2025_02_22',
+                     r'G:\ephys_data\CW59\python\2025_02_24',
+                     r'G:\ephys_data\CW59\python\2025_02_25',
+                     r'G:\ephys_data\CW59\python\2025_02_26',
+                     r'G:\ephys_data\CW59\python\2025_02_28',
+                     ]]
+
+all_naive_paths = [
+        [r'J:\ephys_data\CW48\python\2024_10_29',
+        r'J:\ephys_data\CW48\python\2024_10_30',
+        r'J:\ephys_data\CW48\python\2024_10_31',
+        r'J:\ephys_data\CW48\python\2024_11_01',
+        r'J:\ephys_data\CW48\python\2024_11_02',
+        r'J:\ephys_data\CW48\python\2024_11_03',
+        r'J:\ephys_data\CW48\python\2024_11_04',
+        r'J:\ephys_data\CW48\python\2024_11_05',
+        r'J:\ephys_data\CW48\python\2024_11_06',],
         
-        ]
+                   [r'H:\ephys_data\CW47\python\2024_10_17',
+          r'H:\ephys_data\CW47\python\2024_10_18',
+          # r'H:\ephys_data\CW47\python\2024_10_19',
+          r'H:\ephys_data\CW47\python\2024_10_20',
+          r'H:\ephys_data\CW47\python\2024_10_21',
+          r'H:\ephys_data\CW47\python\2024_10_22',
+          # r'H:\ephys_data\CW47\python\2024_10_23',
+          r'H:\ephys_data\CW47\python\2024_10_24',
+          r'H:\ephys_data\CW47\python\2024_10_25',],
+                   
+                   [r'G:\ephys_data\CW65\python\2025_02_25',],
+                    ]
+
+#%% Aggregate over all FOVs for this analysis - TAKES LONG TIME :^()
+
 
 
 # Get selectivity (spikes/s) Chen et al 2021 Fig 1C
@@ -46,42 +102,43 @@ left_choice_sel, right_choice_sel = [],[]
 
 
 
-for path in paths:
+for path in cat(all_learning_paths):
     s1 = Session(path, passive=False, side='L')
-    s1.good_neurons = [n for n in s1.good_neurons if n in np.where(s1.celltype == 3)[0]]
 
     delay_neurons = s1.get_epoch_selective(epoch=(s1.response-1.5, s1.response), p=0.05)
-    
-    pref,nonpref,_ = s1.plot_selectivity(delay_neurons, plot=False, binsize=200, timestep=50)
+    pref, nonpref, _ = s1.plot_selectivity(delay_neurons, plot=False, binsize=200, timestep=50)
     
     leftpref += [pref]
     leftnonpref += [nonpref]
 
     windows = np.arange(-0.2, s1.time_cutoff, 0.2)
     
-    sample_sel, delay_sel = [],[]
-    for t in range(len(windows)-1):
-        sample_sel += [s1.get_number_selective((windows[t],windows[t+1]), mode='stimulus')]
-        delay_sel += [s1.get_number_selective((windows[t],windows[t+1]), mode='choice')]
-        
+    # sample_sel, delay_sel = [],[]
+    # for t in range(len(windows)-1):
+    #     sample_sel += [s1.get_number_selective((windows[t],windows[t+1]), mode='stimulus')]
+    #     delay_sel += [s1.get_number_selective((windows[t],windows[t+1]), mode='choice')]
+    sample_sel = s1.count_significant_neurons_by_time(s1.good_neurons, mode='stimulus')
+    delay_sel = s1.count_significant_neurons_by_time(s1.good_neurons, mode='choice')
+    
     left_sample_sel += [np.array(sample_sel) / len(s1.good_neurons)]
     left_choice_sel += [np.array(delay_sel) / len(s1.good_neurons)]
+
     
     s1 = Session(path, passive=False, side='R')
-    s1.good_neurons = [n for n in s1.good_neurons if n in np.where(s1.celltype == 3)[0]]
 
     delay_neurons = s1.get_epoch_selective(epoch=(s1.response-1.5, s1.response), p=0.05)
-    
     pref,nonpref,time = s1.plot_selectivity(delay_neurons, plot=False, binsize=200, timestep=50)
     
     rightpref += [pref]
     rightnonpref += [nonpref]
     
-    sample_sel, delay_sel = [],[]
-    for t in range(len(windows)-1):
-        sample_sel += [s1.get_number_selective((windows[t],windows[t+1]), mode='stimulus')]
-        delay_sel += [s1.get_number_selective((windows[t],windows[t+1]), mode='choice')]
-        
+    # sample_sel, delay_sel = [],[]
+    # for t in range(len(windows)-1):
+    #     sample_sel += [s1.get_number_selective((windows[t],windows[t+1]), mode='stimulus')]
+    #     delay_sel += [s1.get_number_selective((windows[t],windows[t+1]), mode='choice')]
+    sample_sel = s1.count_significant_neurons_by_time(s1.good_neurons, mode='stimulus')
+    delay_sel = s1.count_significant_neurons_by_time(s1.good_neurons, mode='choice')  
+    
     right_sample_sel += [np.array(sample_sel) / len(s1.good_neurons)]
     right_choice_sel += [np.array(delay_sel) / len(s1.good_neurons)]
 
@@ -116,8 +173,8 @@ axarr[0,1].fill_between(time, rightsel - rightsel_error,
 
 axarr[0,0].set_title('Left ALM')
 axarr[0,1].set_title('Right ALM')
-axarr[0,0].axhline(0, color='black', ls='--')
-axarr[0,1].axhline(0, color='black', ls='--')
+axarr[0,0].axhline(0, color='grey', ls='--')
+axarr[0,1].axhline(0, color='grey', ls='--')
 
 axarr[1,0].plot(windows, left_sample_sel, color='green', label='Stimulus selective')
 axarr[1,0].plot(windows, left_choice_sel, color='purple', label='Choice selective')
@@ -132,7 +189,8 @@ for i in range(2):
         axarr[i, j].axvline(s1.sample, color = 'grey', alpha=0.5, ls = '--')
         axarr[i, j].axvline(s1.delay, color = 'grey', alpha=0.5, ls = '--')
         axarr[i, j].axvline(s1.response, color = 'grey', alpha=0.5, ls = '--')
-        axarr[i, j].axhline(0, color = 'grey', alpha=0.5, ls = '--')
+axarr[1,0].axhline(0.05, color = 'grey', alpha=0.5, ls = '--')
+axarr[1,1].axhline(0.05, color = 'grey', alpha=0.5, ls = '--')
         
 axarr[1,0].legend()
 
