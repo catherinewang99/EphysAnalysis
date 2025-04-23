@@ -55,7 +55,7 @@ class Session:
     """
     def __init__(self, path, side = 'all', stimside = 'all',
                  passive=False, laser='blue', only_ppyr=True,
-                 filter_low_perf=True):
+                 filter_low_perf=True, filter_by_stim = True):
         
 
         """
@@ -101,13 +101,6 @@ class Session:
             self.num_neurons = len(self.R_alm_idx)
             self.good_neurons = self.R_alm_idx
 
-        if only_ppyr:
-            oldn = len(self.good_neurons)
-            self.good_neurons = [n for n in self.good_neurons if n in np.where(self.celltype == 3)[0]]
-            print('only ppyr neurons: {} --> {}'.format(oldn, len(self.good_neurons)))
-            self.L_alm_idx = [n for n in self.L_alm_idx if n in self.good_neurons]
-            self.R_alm_idx = [n for n in self.R_alm_idx if n in self.good_neurons]
-
         self.side = side
         
         self.num_trials = units['units'][0,0].shape[1]
@@ -122,13 +115,13 @@ class Session:
         
         self.data_type = 'ephys'
         self.sample = .570 # 570 ms offset for sample start
-        self.delay = 0.57 + 1.3
-        self.response = 0.57 + 1.3 + 3
+        self.delay = 0.57 + 1.4
+        self.response = 0.57 + 1.4 + 3
         self.time_cutoff = self.response+3
         if passive:
             self.sample = .570 # 570 ms offset for sample start
-            self.delay = 0.57 + 1.3
-            self.response = 0.57 + 1.3 + 1
+            self.delay = 0.57 + 1.4
+            self.response = 0.57 + 1.4 + 1
             self.time_cutoff = self.response+1
             
         self.sampling_freq = 30000 # 30k for npxl 2.0
@@ -197,6 +190,14 @@ class Session:
         # Re-adjust with i good trials
         self.stim_trials = np.where(self.stim_ON)[0]
         
+        if only_ppyr:
+            oldn = len(self.good_neurons)
+            self.good_neurons = [n for n in self.good_neurons if n in np.where(self.celltype == 3)[0]]
+            if filter_by_stim:
+                self.filter_by_stim_effect()
+            print('only ppyr neurons: {} --> {}'.format(oldn, len(self.good_neurons)))
+            self.L_alm_idx = [n for n in self.L_alm_idx if n in self.good_neurons]
+            self.R_alm_idx = [n for n in self.R_alm_idx if n in self.good_neurons]
         
     ### BEHAVIOR ONLY FUNCTIONS ###
     
@@ -435,6 +436,32 @@ class Session:
         
         return idx
         
+    ### QUALITY FUNCTIONS ###
+
+    def filter_by_stim_effect(self):
+        """
+        Filter out all the ppy neurons that are excited by stim (sst or other)
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        keep_n = []
+        window = (self.delay, self.delay+1)
+        for n in self.good_neurons:
+                
+            stim_trials = self.i_good_L_stim_trials if n in self.L_alm_idx else self.i_good_R_stim_trials
+            ctl_rate = self.get_spike_rate(n, window, self.i_good_non_stim_trials)
+            stim_rate = self.get_spike_rate(n, window, stim_trials)
+            
+            if stim_rate < ctl_rate:
+                
+                keep_n += [n]
+                
+        self.good_neurons = keep_n
+
     
     ### NEURAL FUNCTIONS ###
     
@@ -835,7 +862,7 @@ class Session:
         
         
     def plot_raster_and_PSTH(self, neuron, window=(), opto=False,
-                             binsize=50, timestep=1, stimside = 'both',
+                             binsize=200, timestep=10, stimside = 'both',
                              save=[]):
         """
         
@@ -855,11 +882,11 @@ class Session:
         None.
 
         """
-        stable_trials = self.stable_trials[neuron]
+        # stable_trials = self.stable_trials[neuron]
         L_correct_trials = self.lick_correct_direction('l')
-        L_correct_trials = [i for i in L_correct_trials if not self.stim_ON[i] and i in stable_trials]
+        # L_correct_trials = [i for i in L_correct_trials if not self.stim_ON[i] and i in stable_trials]
         R_correct_trials = self.lick_correct_direction('r')
-        R_correct_trials = [i for i in R_correct_trials if not self.stim_ON[i] and i in stable_trials]
+        # R_correct_trials = [i for i in R_correct_trials if not self.stim_ON[i] and i in stable_trials]
         
         if not opto:
 
@@ -984,9 +1011,9 @@ class Session:
 
     
             L_opto_trials = self.trial_type_direction('l')
-            L_opto_trials = [i for i in L_opto_trials if self.stim_ON[i] and i in stable_trials]
+            L_opto_trials = [i for i in L_opto_trials if self.stim_ON[i]]# and i in stable_trials]
             R_opto_trials = self.trial_type_direction('r')
-            R_opto_trials = [i for i in R_opto_trials if self.stim_ON[i] and i in stable_trials]
+            R_opto_trials = [i for i in R_opto_trials if self.stim_ON[i]]# and i in stable_trials]
                         
             L_opto_trials = [i for i in L_opto_trials if self.stim_side[i] == stimside]
             R_opto_trials = [i for i in R_opto_trials if self.stim_side[i] == stimside]
@@ -1095,10 +1122,10 @@ class Session:
 
         for neuron in self.good_neurons: # Only look at non-noise neurons
             
-            stable_trials = self.stable_trials[neuron]
+            # stable_trials = self.stable_trials[neuron]
 
-            rtrials = [i for i in rtrials if not self.stim_ON[i] and i in stable_trials]
-            ltrials = [i for i in ltrials if not self.stim_ON[i] and i in stable_trials]
+            rtrials = [i for i in rtrials if not self.stim_ON[i] ]#and i in stable_trials]
+            ltrials = [i for i in ltrials if not self.stim_ON[i] ]#and i in stable_trials]
 
             right = self.get_spike_count(neuron, epoch, rtrials)
             left = self.get_spike_count(neuron, epoch, ltrials)

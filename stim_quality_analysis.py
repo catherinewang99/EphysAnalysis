@@ -153,6 +153,40 @@ for n in range(s1.num_neurons):
 plt.ylabel('Spike rate, baseline (spks/s)')
 plt.xlabel('Spike trough-to-peak (ms)')
 
+
+#%% get avk spk rate on stim conditions
+
+stim_spk, ctl_spk = [],[]
+
+for path in cat(all_learning_paths):
+    s1 = Session(path, passive=False)#, side='R')
+    sided_neurons = s1.L_alm_idx
+    
+    stim_trials = s1.i_good_L_stim_trials
+    window = (0.570 + 1.3 + 0.5, 0.570 + 1.3 + 1) # First second of delay
+    
+    for n in sided_neurons:
+        ctl_rate = s1.get_spike_rate(n, window, s1.i_good_non_stim_trials)
+        if ctl_rate < 1:
+            continue
+        stim_spk += [s1.get_spike_rate(n, window, stim_trials)]
+        ctl_spk += [ctl_rate]
+        
+        
+f = plt.figure()
+plt.scatter(ctl_spk, stim_spk, color='blue')
+plt.plot([0, max(ctl_spk)], [0, max(ctl_spk)], ls='--', color='black')
+plt.ylabel('Photoinhibition (spks/s)')
+plt.xlabel('Control (spks/s)')
+plt.show()
+
+
+
+
+
+
+
+
 #%% Get avg spk count for stim  vs condition over cell types per neuron
 # seperate left vs right ALM recordings, only consider the ipsi stim condition
 

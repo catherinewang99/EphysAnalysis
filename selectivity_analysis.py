@@ -89,7 +89,7 @@ all_naive_paths = [
                    [r'G:\ephys_data\CW65\python\2025_02_25',],
                     ]
 
-#%% Aggregate over all FOVs for this analysis - TAKES LONG TIME :^()
+#%% Aggregate over all FOVs for this analysis - TAKES LONG TIME :^(
 
 
 

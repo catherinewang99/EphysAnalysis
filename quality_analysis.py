@@ -21,7 +21,7 @@ plt.rcParams['pdf.fonttype'] = '42'
 all_learning_paths = [[r'G:\ephys_data\CW63\python\2025_03_19',
                       r'G:\ephys_data\CW63\python\2025_03_20',         
                       r'G:\ephys_data\CW63\python\2025_03_22',         
-                      r'G:\ephys_data\CW63\python\2025_03_23',         
+                       r'G:\ephys_data\CW63\python\2025_03_23',         
                       r'G:\ephys_data\CW63\python\2025_03_25',],
                       
                       [r'G:\ephys_data\CW61\python\2025_03_08',
@@ -37,6 +37,24 @@ all_learning_paths = [[r'G:\ephys_data\CW63\python\2025_03_19',
                        r'J:\ephys_data\CW54\python\2025_02_03']
                       ]
 
+all_learning_paths_stimcorrected = [[r'G:\ephys_data\CW63\python\2025_03_19',
+                          r'G:\ephys_data\CW63\python\2025_03_20',         
+                          r'G:\ephys_data\CW63\python\2025_03_22',         
+                           # r'G:\ephys_data\CW63\python\2025_03_23',         
+                          r'G:\ephys_data\CW63\python\2025_03_25',],
+                          
+                          [r'G:\ephys_data\CW61\python\2025_03_08',
+                           # r'G:\ephys_data\CW61\python\2025_03_09', 
+                           r'G:\ephys_data\CW61\python\2025_03_10', 
+                           r'G:\ephys_data\CW61\python\2025_03_11', 
+                           # r'G:\ephys_data\CW61\python\2025_03_12', 
+                           # r'G:\ephys_data\CW61\python\2025_03_14', 
+                           r'G:\ephys_data\CW61\python\2025_03_17', 
+                           # r'G:\ephys_data\CW61\python\2025_03_18', 
+                           ],
+                          [r'J:\ephys_data\CW54\python\2025_02_01',
+                           r'J:\ephys_data\CW54\python\2025_02_03']
+                          ]
 
 all_expert_paths = [[
                         # r'J:\ephys_data\CW49\python\2024_12_11',
@@ -96,7 +114,7 @@ all_samplel, all_sampler = [],[]
 all_delayl, all_delayr = [],[]
 all_actionl, all_actionr = [],[]
     
-for paths in all_learning_paths:
+for paths in all_naive_paths:
     
     numl, numr = [],[]
     samplel, sampler = [],[]
@@ -105,7 +123,7 @@ for paths in all_learning_paths:
     
     for path in paths:
         
-        s1 = Session(path, passive=False)#, side='R')
+        s1 = Session(path, passive=False, filter_low_perf=False)#, side='R')
     
         numl += [len(s1.L_alm_idx)]    
         numr += [len(s1.R_alm_idx)]    
@@ -141,7 +159,7 @@ for idx in range(len(all_numl)):
     
 plt.xticks([0,1],['Left ALM', 'Right ALM'])
 plt.ylabel('Number of neurons')
-plt.title('Expert sessions (n=3 mice)')
+plt.title('Naive sessions (n=3 mice)')
     
 
 f, ax = plt.subplots(1,2, sharey='row', figsize=(10,5))
@@ -208,28 +226,172 @@ for i in range(2):
 plt.show()
 
 #%% Effect of stim per neuron, scatter control vs stim
-stim_spk, ctl_spk = [],[]
+# stim_spk, ctl_spk = [],[]
+all_norm_rate, all_norm_rate_err = [], []
+for path in cat(all_expert_paths):
+    stim_spk, ctl_spk = [],[]
 
-for path in cat(all_learning_paths):
-    s1 = Session(path, passive=False)#, side='R')
+    s1 = Session(path, passive=False)# , filter_low_perf=False)#, side='R')
     sided_neurons = s1.L_alm_idx
     
     stim_trials = s1.i_good_L_stim_trials
-    window = (0.570 + 1.3 + 0.5, 0.570 + 1.3 + 1) # First second of delay
+    window = (s1.delay + 0 , s1.delay + 0.5) # First second of delay
     
     for n in sided_neurons:
         ctl_rate = s1.get_spike_rate(n, window, s1.i_good_non_stim_trials)
+        stim_rate = s1.get_spike_rate(n, window, stim_trials)
         if ctl_rate < 1:
             continue
-        stim_spk += [s1.get_spike_rate(n, window, stim_trials)]
+        if stim_rate > ctl_rate:
+            continue
+        stim_spk += [stim_rate]
         ctl_spk += [ctl_rate]
+    all_norm_rate += [np.mean(np.array(stim_spk) / np.array(ctl_spk))]
+    all_norm_rate_err += [np.std(np.array(stim_spk) / np.array(ctl_spk)) / np.sqrt(len(stim_spk))]
         
-        
+    # f = plt.figure()
+    # plt.scatter(ctl_spk, stim_spk, color='blue')
+    # plt.plot([0, max(ctl_spk)], [0, max(ctl_spk)], ls='--', color='black')
+    # plt.ylabel('Photoinhibition (spks/s)')
+    # plt.xlabel('Control (spks/s)')
+    # plt.title('{}'.format(s1.path))
+    # plt.show()
+
+f = plt.figure()
+plt.errorbar(range(len(all_norm_rate)), all_norm_rate, yerr=all_norm_rate_err, fmt='o', capsize=5, ecolor='black', elinewidth=1.5)
+plt.ylabel('Normalized spike rate (spk/s) (stim/ctl)')
+plt.axhline(0.2, ls='--', color='red')
+plt.axhline(0.4, ls='--', color='grey')
+plt.ylim(0, 0.85)
+plt.xlabel('FOVs')
+
+f = plt.figure()
+plt.scatter(all_norm_rate, all_norm_rate)
+plt.axhline(0.2, ls='--', color='grey')
+plt.axvline(0.2, ls='--', color='grey')
+plt.axhline(0.4, ls='--', color='grey')
+plt.axvline(0.4, ls='--', color='grey')
+
+plt.ylabel('Right ALM')
+plt.xlabel('Left ALM')
+#%% Deep dive into PSTH of one session:
+    
+path = r'G:\ephys_data\CW63\python\2025_03_22'
+# path = r'J:\ephys_data\CW54\python\2025_02_03'
+# path = r'G:\ephys_data\CW61\python\2025_03_17'
+
+s1 = Session(path, passive=False, filter_low_perf=True)
+
+# plot waveforms
+values = []
+sided_neurons = s1.L_alm_idx
+
+stim_trials = s1.i_good_L_stim_trials
+for n in sided_neurons:
+    values += [s1.get_waveform_width(n)] # Plot in ms
+
+f = plt.figure()
+plt.hist(values)
+plt.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
+plt.axvline(0.35, color='grey', ls = '--')
+plt.axvline(0.45, color='grey', ls = '--')
+plt.ylabel('Number of neurons')
+plt.xlabel('Spike trough-to-peak (ms)')
+
+
+celltypes = [3,1] # FS and ppyr
+
+# for c in celltypes:
+#     neuron_cell_type = np.where(s1.celltype == c)[0]
+#     color = 'red' if c == 1 else 'black'
+for n in sided_neurons:
+    
+    plt.plot(np.arange(len(s1.get_single_waveform(n))),
+             s1.get_single_waveform(n), alpha = 0.2)
+    
+window = (s1.delay, s1.delay + 0.5) # First second of delay
+stim_spk, ctl_spk = [],[]
+middle_neurons, pint = [], []
+for n in sided_neurons:
+    ctl_rate = s1.get_spike_rate(n, window, s1.i_good_non_stim_trials)
+    # if ctl_rate < 1:
+    #     continue
+    stim_rate = s1.get_spike_rate(n, window, stim_trials)
+    # if stim_rate/ctl_rate > 0.55: 
+    #     continue
+    # if stim_rate > ctl_rate: 
+    #     pint = [n]
+    #     continue
+    stim_spk += [stim_rate]
+    ctl_spk += [ctl_rate]
+    
+    if stim_rate/ctl_rate > 0.4 and stim_rate/ctl_rate < 1:
+        middle_neurons += [n]
+    
 f = plt.figure()
 plt.scatter(ctl_spk, stim_spk, color='blue')
 plt.plot([0, max(ctl_spk)], [0, max(ctl_spk)], ls='--', color='black')
 plt.ylabel('Photoinhibition (spks/s)')
 plt.xlabel('Control (spks/s)')
+plt.title('{}'.format(s1.path))
+plt.show()
+
+    
+f = plt.figure()
+plt.hist(stim_spk, color='blue', bins=50)
+plt.xlabel('Photoinhibition (spks/s)')
+plt.ylabel('Count')
+plt.title('{}'.format(s1.path))
+plt.show()
+
+
+f = plt.figure()
+plt.hist(np.array(stim_spk) / np.array(ctl_spk), color='blue', bins=100)
+plt.xlabel('Normalized spk rate (spks/s)')
+plt.ylabel('Count')
+plt.axvline(0.2, ls='--')
+plt.axvline(np.mean(np.array(stim_spk) / np.array(ctl_spk)), ls='--', color='red')
+plt.xlim(0, 1)
+plt.title('{}'.format(s1.path))
+plt.show()
+
+norm_arr = np.array(stim_spk) / np.array(ctl_spk)
+
+sorted_norm_idx = np.argsort(norm_arr, )
+#%% plot all neurons
+for idx in sorted_norm_idx:
+    
+    s1.plot_raster_and_PSTH(s1.R_alm_idx[idx], stimside = 'R', opto=True)
+    
+# Plot across trials for middle pack / all neurons
+stim_spk_trial = []
+for n in middle_neurons:
+    
+    ctl_rate = s1.get_spike_rate(n, window, s1.i_good_non_stim_trials)
+
+    stim_spk = []
+    for t in stim_trials:
+        stim_rate = s1.get_spike_rate(n, window, [t])
+    # if stim_rate/ctl_rate > 0.55: 
+    #     continue
+        stim_spk += [stim_rate / ctl_rate]
+    # ctl_spk += [ctl_rate]
+    stim_spk_trial += [stim_spk]
+    
+f=plt.figure(figsize=(10,10))
+for i in range(len(stim_spk_trial[0])):
+    plt.scatter(np.ones(len(stim_spk_trial)) * i, np.array(stim_spk_trial)[:,i])
+plt.ylabel('norm spk rate across neurons (stim / ctl)')
+plt.xlabel('stim trials')
+plt.show()
+
+
+    
+f=plt.figure(figsize=(10,10))
+for i in range(len(stim_spk_trial[0])):
+    plt.scatter([i], [np.median(np.array(stim_spk_trial)[:,i])])
+plt.ylabel('median norm spk rate across neurons (stim / ctl)')
+plt.xlabel('stim trials')
 plt.show()
 
 
