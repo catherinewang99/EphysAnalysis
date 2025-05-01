@@ -60,16 +60,16 @@ all_expert_paths = [[
                         # r'J:\ephys_data\CW49\python\2024_12_11',
                         # r'J:\ephys_data\CW49\python\2024_12_12',
                         r'J:\ephys_data\CW49\python\2024_12_13',
-                        r'J:\ephys_data\CW49\python\2024_12_14',
-                        r'J:\ephys_data\CW49\python\2024_12_15',
-                        r'J:\ephys_data\CW49\python\2024_12_16',
+                        # r'J:\ephys_data\CW49\python\2024_12_14',
+                        # r'J:\ephys_data\CW49\python\2024_12_15',
+                        # r'J:\ephys_data\CW49\python\2024_12_16',
                 
                           ],
                     [
                         r'J:\ephys_data\CW53\python\2025_01_27',
                         r'J:\ephys_data\CW53\python\2025_01_28',
                         r'J:\ephys_data\CW53\python\2025_01_29',
-                        r'J:\ephys_data\CW53\python\2025_01_30',
+                        # r'J:\ephys_data\CW53\python\2025_01_30',
                         r'J:\ephys_data\CW53\python\2025_02_01',
                         r'J:\ephys_data\CW53\python\2025_02_02',
                           ],
@@ -235,7 +235,7 @@ for path in cat(all_expert_paths):
     sided_neurons = s1.L_alm_idx
     
     stim_trials = s1.i_good_L_stim_trials
-    window = (s1.delay + 0 , s1.delay + 0.5) # First second of delay
+    window = (s1.delay + 0 , s1.delay + 1) # First second of delay
     
     for n in sided_neurons:
         ctl_rate = s1.get_spike_rate(n, window, s1.i_good_non_stim_trials)
