@@ -913,7 +913,7 @@ class Mode(Session):
                 return_traces = False):
         "This method orthogonalizes the various modes"
 
-        
+        start = time.time()
         
         if ctl:
             orthonormal_basis, var_allDim = self.func_compute_activity_modes_DRT([self.PSTH_r_train_correct, 
@@ -925,7 +925,9 @@ class Mode(Session):
                                                                                 self.PSTH_r_train_error, 
                                                                                 self.PSTH_l_train_error], ctl=ctl, 
                                                                                 lickdir=lickdir)           
-            
+        
+        print("calculation time: {}".format(time.time() - start))
+        
         activityRL_train= np.concatenate((self.PSTH_r_train_correct, 
                                         self.PSTH_l_train_correct, 
                                         self.PSTH_r_train_error, 

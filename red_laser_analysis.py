@@ -211,6 +211,55 @@ f=plt.figure()
 plt.scatter(ephys_trials, l_frac, color='red')
 plt.scatter(ephys_trials, r_frac, color='blue')
 
+
+#%% Proportion of suppr/exc neurons that are delay/sample selective
+
+paths = [r'J:\ephys_data\CW53\python\2025_01_31',
+         r'G:\ephys_data\CW59\python\2025_02_27',]
+
+l_frac_delay, r_frac_delay = [], []
+l_frac_sample, r_frac_sample = [], []
+
+for i in range(4):
+    path = paths[i]
+    s1 = Session(path, passive=False, filter_low_perf=False, filter_by_stim=False, laser = 'red')
+    
+    window = (0.57, 0.57+2.3) 
+    
+    stim_trials = np.where(s1.stim_level == 2.7)[0]
+    control_trials = np.where(s1.stim_level == 0)[0]
+
+    delay_sel = s1.get_epoch_selective((s1.delay, s1.response), p=0.01)
+    sample_sel = s1.get_epoch_selective((s1.sample, s1.delay), p=0.01)
+
+    sig_effect_delay, sig_effect_sample = [], []
+    for n in s1.L_alm_idx: 
+        if n in delay_sel:
+            val = s1.stim_effect_per_neuron(n, stim_trials, window=window)
+            sig_effect_delay += [val]
+        elif n in sample_sel:
+            val = s1.stim_effect_per_neuron(n, stim_trials, window=window)
+            sig_effect_sample += [val]
+        
+    frac_supr, frac_exc, frac_none = sum(np.array(sig_effect_delay) == -1), sum(np.array(sig_effect_delay) == 1), sum(np.array(sig_effect_delay) == 0)
+    l_frac_delay +=[ np.array([frac_supr, frac_exc, frac_none])] # / len(s1.R_alm_idx)
+    frac_supr, frac_exc, frac_none = sum(np.array(sig_effect_sample) == -1), sum(np.array(sig_effect_sample) == 1), sum(np.array(sig_effect_sample) == 0)
+    l_frac_sample += [np.array([frac_supr, frac_exc, frac_none])] # / len(s1.R_alm_idx)
+    
+    sig_effect_delay, sig_effect_sample = [], []
+    for n in s1.R_alm_idx:
+        if n in delay_sel:
+            val = s1.stim_effect_per_neuron(n, stim_trials, window=window)
+            sig_effect_delay += [val]
+        elif n in sample_sel:
+            val = s1.stim_effect_per_neuron(n, stim_trials, window=window)
+            sig_effect_sample += [val]
+        
+    frac_supr, frac_exc, frac_none = sum(np.array(sig_effect_delay) == -1), sum(np.array(sig_effect_delay) == 1), sum(np.array(sig_effect_delay) == 0)
+    r_frac_delay += [np.array([frac_supr, frac_exc, frac_none])] # / len(s1.R_alm_idx)
+    frac_supr, frac_exc, frac_none = sum(np.array(sig_effect_sample) == -1), sum(np.array(sig_effect_sample) == 1), sum(np.array(sig_effect_sample) == 0)
+    r_frac_sample += [np.array([frac_supr, frac_exc, frac_none])] # / len(s1.R_alm_idx)
+    
 #%% Selectivity recovery for red laser behavior sessions
 
 path = r'J:\ephys_data\CW53\python\2025_01_31'

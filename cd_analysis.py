@@ -38,6 +38,7 @@ paths = [
             r'J:\ephys_data\CW49\python\2024_12_16',
         
         ]
+path =  r'G:\ephys_data\CW59\python\2025_02_24'
 
 s1 = Mode(path, side='R')#, timestep=1)#, passive=False)
 s1.plot_CD(mode_input='stimulus')
