@@ -28,7 +28,7 @@ import behavior
 #%% Proportion of neurons significantly affected by laser
 path = r'G:\ephys_data\CW63\python\2025_03_21'
 # path = r'G:\ephys_data\CW61\python\2025_03_12'
-# path = r'J:\ephys_data\CW53\python\2025_01_31'
+path = r'J:\ephys_data\CW53\python\2025_01_31'
 path = r'G:\ephys_data\CW59\python\2025_02_27'
 passive=False
 s1 = Session(path, passive=passive, filter_low_perf=False, filter_by_stim=False, laser = 'red')
@@ -41,7 +41,7 @@ control_trials = np.where(s1.stim_level == 0)[0]
 
 sig_effect = []
 for n in s1.L_alm_idx:
-    val = s1.stim_effect_per_neuron(n, stim_trials, window=window)
+    val = s1.stim_effect_per_neuron(n, stim_trials, window=window, p=0.0001)
     sig_effect += [val]    
     
 frac_supr, frac_exc, frac_none = sum(np.array(sig_effect) == -1), sum(np.array(sig_effect) == 1), sum(np.array(sig_effect) == 0)
@@ -49,7 +49,7 @@ l_info = np.array([frac_supr, frac_exc, frac_none]) / len(s1.L_alm_idx)
 
 sig_effect = []
 for n in s1.R_alm_idx:
-    val = s1.stim_effect_per_neuron(n, stim_trials, window=window)
+    val = s1.stim_effect_per_neuron(n, stim_trials, window=window, p=0.0001)
     sig_effect += [val]    
     
 frac_supr, frac_exc, frac_none = sum(np.array(sig_effect) == -1), sum(np.array(sig_effect) == 1), sum(np.array(sig_effect) == 0)
@@ -65,8 +65,9 @@ plt.ylim(0, 0.75)
 plt.show()
 
 #%% plot single neurons
+idx = np.where(np.array(sig_effect) == -1)[0]
 
-s1.plot_raster_and_PSTH(s1.L_alm_idx[7], opto=True, stimside = 'L')
+s1.plot_raster_and_PSTH(s1.R_alm_idx[idx[3]], opto=True, stimside = 'L')
 
 #%% Red laser passive analysis - plot overall effect on ppyr neurons
 path = r'G:\ephys_data\CW63\python\2025_03_21'

@@ -269,14 +269,50 @@ plt.show()
 
 
 #%% Aggregate FOV view
-allpaths = [r'G:\ephys_data\CW63\python\2025_03_19',
+allpaths = [[r'G:\ephys_data\CW63\python\2025_03_19',
         r'G:\ephys_data\CW63\python\2025_03_20',         
         r'G:\ephys_data\CW63\python\2025_03_22',         
          # r'G:\ephys_data\CW63\python\2025_03_23',         
-        r'G:\ephys_data\CW63\python\2025_03_25',]
+        r'G:\ephys_data\CW63\python\2025_03_25',]]
 
+allpaths = [[r'G:\ephys_data\CW61\python\2025_03_08',
+ # r'G:\ephys_data\CW61\python\2025_03_09', 
+ r'G:\ephys_data\CW61\python\2025_03_10', 
+ r'G:\ephys_data\CW61\python\2025_03_11', 
+ # r'G:\ephys_data\CW61\python\2025_03_12', 
+ # r'G:\ephys_data\CW61\python\2025_03_14', 
+ r'G:\ephys_data\CW61\python\2025_03_17', 
+ # r'G:\ephys_data\CW61\python\2025_03_18', 
+ ]]
+allpaths = [  [r'J:\ephys_data\CW54\python\2025_02_01',
+   r'J:\ephys_data\CW54\python\2025_02_03']]
 
-for paths in all_learning_paths_stimcorrected:
+allpaths = [[
+            # r'J:\ephys_data\CW49\python\2024_12_11',
+            # r'J:\ephys_data\CW49\python\2024_12_12',
+            r'J:\ephys_data\CW49\python\2024_12_13',
+            # r'J:\ephys_data\CW49\python\2024_12_14',
+            # r'J:\ephys_data\CW49\python\2024_12_15',
+            # r'J:\ephys_data\CW49\python\2024_12_16',
+    
+              ]]
+# allpaths = [[
+#     r'J:\ephys_data\CW53\python\2025_01_27',
+#     r'J:\ephys_data\CW53\python\2025_01_28',
+#     r'J:\ephys_data\CW53\python\2025_01_29',
+#     # r'J:\ephys_data\CW53\python\2025_01_30',
+#     r'J:\ephys_data\CW53\python\2025_02_01',
+#     r'J:\ephys_data\CW53\python\2025_02_02',
+#       ]]
+
+# allpaths = [[r'G:\ephys_data\CW59\python\2025_02_22',
+#   r'G:\ephys_data\CW59\python\2025_02_24',
+#   r'G:\ephys_data\CW59\python\2025_02_25',
+#   r'G:\ephys_data\CW59\python\2025_02_26',
+#   r'G:\ephys_data\CW59\python\2025_02_28',
+  
+#   ]]
+for paths in allpaths:
     
     all_control_sel, all_opto_sel_stim_left, all_opto_sel_stim_right = [],[],[]
     
@@ -286,7 +322,8 @@ for paths in all_learning_paths_stimcorrected:
         s1 = Session(path, passive=False)
     
         left_info, right_info = s1.selectivity_optogenetics(epoch = (s1.delay, s1.response),
-                                                            p=0.05, 
+                                                            # p=0.05/len(s1.good_neurons), 
+                                                            p=0.01,
                                                             binsize=150, 
                                                             timestep=50,
                                                             return_traces=True)
@@ -294,14 +331,22 @@ for paths in all_learning_paths_stimcorrected:
         control_sel, opto_sel_stim_left, opto_sel_stim_right, time = left_info
         control_sel_R, opto_sel_stim_left_R, opto_sel_stim_right_R, _ = right_info
         
-        all_control_sel += control_sel
-        all_opto_sel_stim_left += opto_sel_stim_left
-        all_opto_sel_stim_right += opto_sel_stim_right
+        early_delay = np.where((time > s1.delay) & (time < s1.delay + 1.5))[0]
+        late_delay = np.where((time > s1.delay + 1.5) & (time < s1.response))[0]
         
-        all_control_sel_R += control_sel_R
-        all_opto_sel_stim_left_R += opto_sel_stim_left_R
-        all_opto_sel_stim_right_R += opto_sel_stim_right_R
-        
+        # Filtering criteria
+        if len(control_sel_R) >= 5 and len(control_sel) >= 5:
+            if np.mean(np.mean(control_sel_R, axis=0)[early_delay]) >= 0.5 and np.mean(np.mean(control_sel, axis=0)[early_delay]) >= 0.5:
+                if np.mean(np.mean(control_sel_R, axis=0)[late_delay]) >= 1 and np.mean(np.mean(control_sel, axis=0)[late_delay]) >= 1:
+                
+                    all_control_sel += control_sel
+                    all_opto_sel_stim_left += opto_sel_stim_left
+                    all_opto_sel_stim_right += opto_sel_stim_right
+                    
+                    all_control_sel_R += control_sel_R
+                    all_opto_sel_stim_left_R += opto_sel_stim_left_R
+                    all_opto_sel_stim_right_R += opto_sel_stim_right_R
+
     # Plot
     
     sel = np.mean(all_control_sel, axis=0)
@@ -386,7 +431,6 @@ for paths in all_learning_paths_stimcorrected:
 #%% Plot modularity as a proportion
 
 
-all_opto_prop_stim_left, all_opto_prop_stim_right = [],[]
 paths = [r'G:\ephys_data\CW59\python\2025_02_22',
   r'G:\ephys_data\CW59\python\2025_02_24',
   r'G:\ephys_data\CW59\python\2025_02_25',
@@ -398,32 +442,57 @@ paths = [r'G:\ephys_data\CW59\python\2025_02_22',
 # paths =                           [r'J:\ephys_data\CW54\python\2025_02_01',
 #                             r'J:\ephys_data\CW54\python\2025_02_03']
 
-paths = [r'G:\ephys_data\CW63\python\2025_03_19',
-        r'G:\ephys_data\CW63\python\2025_03_20',         
-        r'G:\ephys_data\CW63\python\2025_03_22',         
-         # r'G:\ephys_data\CW63\python\2025_03_23',         
-        r'G:\ephys_data\CW63\python\2025_03_25',]
+# paths = [r'G:\ephys_data\CW63\python\2025_03_19',
+#         r'G:\ephys_data\CW63\python\2025_03_20',         
+#         r'G:\ephys_data\CW63\python\2025_03_22',         
+#          # r'G:\ephys_data\CW63\python\2025_03_23',         
+#         r'G:\ephys_data\CW63\python\2025_03_25',]
+
+# paths = [
+#     r'J:\ephys_data\CW53\python\2025_01_27',
+#     r'J:\ephys_data\CW53\python\2025_01_28',
+#     r'J:\ephys_data\CW53\python\2025_01_29',
+#     # r'J:\ephys_data\CW53\python\2025_01_30',
+#     r'J:\ephys_data\CW53\python\2025_02_01',
+#     r'J:\ephys_data\CW53\python\2025_02_02',
+#       ]
+
+all_opto_prop_stim_left, all_opto_prop_stim_right = [],[]
 for path in paths:
     s1 = Session(path, passive=False, filter_low_perf=True)
     
     left_info, right_info = s1.selectivity_optogenetics(epoch = (s1.delay, s1.response),
-                                                        p=0.05, 
+                                                        p=0.01, 
+                                                        # p=0.05/len(s1.good_neurons), 
                                                         binsize=150, 
                                                         timestep=50,
-                                                        return_traces=False,
-                                                        bootstrap=True)
-    sel, selo_stimleft, selo_stimright, err, erro_stimleft, erro_stimright, time = left_info
-    sel_R, selo_stimleft_R, selo_stimright_R, err_R, erro_stimleft_R, erro_stimright_R, time = right_info
+                                                        return_traces=True,
+                                                        bootstrap=False)
+    # sel, selo_stimleft, selo_stimright, err, erro_stimleft, erro_stimright, time = left_info
+    # sel_R, selo_stimleft_R, selo_stimright_R, err_R, erro_stimleft_R, erro_stimright_R, time = right_info
     
+    control_sel, opto_sel_stim_left, opto_sel_stim_right, time = left_info
+    control_sel_R, opto_sel_stim_left_R, opto_sel_stim_right_R, _ = right_info
 
     period = np.where((time > s1.delay) & (time < s1.delay + 1))[0] # Coupling
     
     # period = np.where((time > s1.delay + 1) & (time < s1.delay + 3))[0] # Robustness
     
-    all_opto_prop_stim_left += [np.mean(selo_stimright[period]) / np.mean(sel[period])]
-
-
-    all_opto_prop_stim_right += [np.mean(selo_stimleft_R[period]) / np.mean(sel_R[period])]
+    early_delay = np.where((time > s1.delay) & (time < s1.delay + 1.5))[0]
+    late_delay = np.where((time > s1.delay + 1.5) & (time < s1.response))[0]
+    
+    # Filtering criteria
+    if len(control_sel_R) >= 5 and len(control_sel) >= 5:
+        if np.mean(np.mean(control_sel_R, axis=0)[early_delay]) >= 0.5 and np.mean(np.mean(control_sel, axis=0)[early_delay]) >= 0.5:
+            if np.mean(np.mean(control_sel_R, axis=0)[late_delay]) >= 1 and np.mean(np.mean(control_sel, axis=0)[late_delay]) >= 1:
+    
+                selo_stimright = np.mean(opto_sel_stim_right, axis=0)
+                sel = np.mean(control_sel, axis=0)
+                selo_stimleft_R = np.mean(opto_sel_stim_left_R, axis=0)
+                sel_R = np.mean(control_sel_R, axis=0)
+                
+                all_opto_prop_stim_left += [np.mean(selo_stimright[period]) / np.mean(sel[period])]
+                all_opto_prop_stim_right += [np.mean(selo_stimleft_R[period]) / np.mean(sel_R[period])]
     
 # Filtering steps 
 

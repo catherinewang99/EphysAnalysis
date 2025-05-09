@@ -93,6 +93,8 @@ class Session:
         self.fs_idx = np.where(self.celltype == 1)[0]
         self.pyr_idx = np.where(self.celltype == 3)[0]
         
+        if 'shank' in units.keys():
+            self.shank = units['shank'][0]
         
         self.num_neurons = units['units'].shape[1]
         self.good_neurons = np.arange(self.num_neurons)
@@ -614,6 +616,20 @@ class Session:
     
     def get_spike_count(self, neuron, window, trials):
         """
+        Vectorized: Get spike counts per trial for a specific neuron and time window.
+        """
+        start, stop = window
+    
+        # Extract all spike times for the neuron and selected trials
+        trial_spks = self.spks[neuron][0, trials]
+    
+        # Use list comprehension + NumPy for speed
+        counts = [np.sum((spk >= start) & (spk < stop)) for spk in trial_spks]
+    
+        return counts
+    
+    def get_spike_count_old(self, neuron, window, trials):
+        """
         Get spike counts per trial for specific window for specific neuron
         
         """
@@ -792,6 +808,7 @@ class Session:
         stderr = stderr[trim_indices]
         
         # print(start - time_.time())
+        self.time=time
         
         if len(period) != 0:
             start,stop = period
@@ -1066,10 +1083,17 @@ class Session:
             
             if vmax > vmax_opto:
                 axarr[1, 1].sharey(axarr[1, 0])  # Make Bottom-Right share y-axis with Bottom-Left
-                axarr[1, 1].hlines(y=vmax, xmin=self.delay, xmax=self.delay + 1, linewidth=10, color='lightblue')
+                if self.laser == 'blue':
+                    axarr[1, 1].hlines(y=vmax, xmin=self.delay, xmax=self.delay + 1, linewidth=10, color='lightblue')
+                elif self.laser == 'red':
+                    axarr[1, 1].hlines(y=vmax, xmin=self.sample, xmax=self.delay + 1, linewidth=10, color='red')
+
             else:
                 axarr[1, 0].sharey(axarr[1, 1])  # Make Bottom-Right share y-axis with Bottom-Left
-                axarr[1, 1].hlines(y=vmax_opto, xmin=self.delay, xmax=self.delay + 1, linewidth=10, color='lightblue')
+                if self.laser == 'blue':
+                    axarr[1, 1].hlines(y=vmax_opto, xmin=self.delay, xmax=self.delay + 1, linewidth=10, color='lightblue')
+                elif self.laser == 'red':
+                    axarr[1, 1].hlines(y=vmax_opto, xmin=self.sample, xmax=self.delay + 1, linewidth=10, color='red')
 
             axarr[0,1].set_title(title)
 
@@ -1430,6 +1454,7 @@ class Session:
         
         def process_neurons(n):
             n_pref, n_nonpref = [],[]
+            sel = []
             # start = time_.time()
 
             for _ in range(30):
@@ -1462,12 +1487,19 @@ class Session:
                     pref, time,_ = self.get_PSTH(n, r_control_trials, binsize=binsize, timestep=timestep)
                     nonpref,_,_ = self.get_PSTH(n, l_control_trials, binsize=binsize, timestep=timestep)
     
-                
-                n_pref += [pref]
-                n_nonpref += [nonpref]
+                if return_pref_np:
+                    n_pref += [pref]
+                    n_nonpref += [nonpref]
+                else:
+                    sel += [pref-nonpref]
   
+            if return_pref_np:
+
+                return np.mean(n_pref, axis=0), np.mean(n_nonpref, axis=0)
             
-            return np.mean(n_pref, axis=0), np.mean(n_nonpref, axis=0)
+            else:
+                
+                return np.mean(sel, axis=0)
         
         # Late delay selective neurons
 
@@ -1501,21 +1533,23 @@ class Session:
             
             iterator = tqdm(iterator, total=len(neurons), desc="Computing selectivity")
         
-            for pref, nonpref in iterator:
-                if pref is not None and nonpref is not None:
-                    results.append((pref, nonpref))
-        
-            allpref = [r[0] for r in results]
-            allnonpref = [r[1] for r in results]
+            if return_pref_np:
+                for pref, nonpref in iterator:
+                    if pref is not None and nonpref is not None:
+                        results.append((pref, nonpref))
             
-        if plot:
-            # plt.plot(range(self.time_cutoff), sel, 'b-')
-            # plt.axhline(y=0)
-            # plt.title('Selectivity of neuron {}: {} selective'.format(neuron_num, direction))
-            # plt.show()
-            return allpref, allnonpref
+                allpref = [r[0] for r in results]
+                allnonpref = [r[1] for r in results]
+            else:
+                for sel in iterator:
+                    if sel is not None:
+                        results.append((sel))
+                            
+
         if return_pref_np:
-            return allpref, allnonpref, time
+            return allpref, allnonpref, self.time
+        else:
+            return results, self.time
 
 
     

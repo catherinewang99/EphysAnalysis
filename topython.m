@@ -22,6 +22,7 @@ for j = 1:length(lst)
         celltype = zeros(1, numunits);
         spikewidth = zeros(1, numunits);
         mean_waveform = cell(1, numunits);
+        shank = zeros(1, numunits);
         for i = 1:numunits
             trials = cell(1, size(obj.stimProb, 1)); % same number of trials for each unit
 
@@ -33,12 +34,13 @@ for j = 1:length(lst)
 
             units{i} = trials; % Add all trial sorted spikes to unit
             imec(i) = str2double(obj.units{1, i}.imec); % include L/R ALM info
+            shank(i) = obj.units{1, i}.shank_info; % include shank number
             [celltype(i), spikewidth(i)] = func_get_cell_type_kilosort(obj.units{1, i}.mean_waveform); % cell type info
             mean_waveform{i} = obj.units{1, i}.mean_waveform; % mean waveform
             stabletrials{i} = obj.units{1, i}.stable_trials; % add stable trials
         end 
         nametmp = namesplit(5);
-        save([path, 'python\' strjoin(namesplit(2:4), '_') '\units.mat'], 'units', 'imec', 'stabletrials', 'mean_waveform', 'celltype')
+        save([path, 'python\' strjoin(namesplit(2:4), '_') '\units.mat'], 'units', 'imec', 'stabletrials', 'mean_waveform', 'celltype', 'shank')
 
 
         % Get behavioral data

@@ -227,15 +227,23 @@ plt.show()
 
 #%% Effect of stim per neuron, scatter control vs stim
 # stim_spk, ctl_spk = [],[]
+
+paths = [            r'J:\ephys_data\CW49\python\2024_12_11',
+            r'J:\ephys_data\CW49\python\2024_12_12',
+            r'J:\ephys_data\CW49\python\2024_12_13',
+            r'J:\ephys_data\CW49\python\2024_12_14',
+            r'J:\ephys_data\CW49\python\2024_12_15',
+            r'J:\ephys_data\CW49\python\2024_12_16',]
 all_norm_rate, all_norm_rate_err = [], []
-for path in cat(all_expert_paths):
+# for path in cat(all_expert_paths):
+for path in paths:
     stim_spk, ctl_spk = [],[]
 
     s1 = Session(path, passive=False)# , filter_low_perf=False)#, side='R')
-    sided_neurons = s1.L_alm_idx
+    sided_neurons = s1.R_alm_idx
     
-    stim_trials = s1.i_good_L_stim_trials
-    window = (s1.delay + 0 , s1.delay + 1) # First second of delay
+    stim_trials = s1.i_good_R_stim_trials
+    window = (s1.delay + 0 , s1.delay + 0.5) # First second of delay
     
     for n in sided_neurons:
         ctl_rate = s1.get_spike_rate(n, window, s1.i_good_non_stim_trials)
@@ -249,13 +257,13 @@ for path in cat(all_expert_paths):
     all_norm_rate += [np.mean(np.array(stim_spk) / np.array(ctl_spk))]
     all_norm_rate_err += [np.std(np.array(stim_spk) / np.array(ctl_spk)) / np.sqrt(len(stim_spk))]
         
-    # f = plt.figure()
-    # plt.scatter(ctl_spk, stim_spk, color='blue')
-    # plt.plot([0, max(ctl_spk)], [0, max(ctl_spk)], ls='--', color='black')
-    # plt.ylabel('Photoinhibition (spks/s)')
-    # plt.xlabel('Control (spks/s)')
-    # plt.title('{}'.format(s1.path))
-    # plt.show()
+    f = plt.figure()
+    plt.scatter(ctl_spk, stim_spk, color='blue')
+    plt.plot([0, max(ctl_spk)], [0, max(ctl_spk)], ls='--', color='black')
+    plt.ylabel('Photoinhibition (spks/s)')
+    plt.xlabel('Control (spks/s)')
+    plt.title('{}'.format(s1.path))
+    plt.show()
 
 f = plt.figure()
 plt.errorbar(range(len(all_norm_rate)), all_norm_rate, yerr=all_norm_rate_err, fmt='o', capsize=5, ecolor='black', elinewidth=1.5)
@@ -265,15 +273,62 @@ plt.axhline(0.4, ls='--', color='grey')
 plt.ylim(0, 0.85)
 plt.xlabel('FOVs')
 
-f = plt.figure()
-plt.scatter(all_norm_rate, all_norm_rate)
-plt.axhline(0.2, ls='--', color='grey')
-plt.axvline(0.2, ls='--', color='grey')
-plt.axhline(0.4, ls='--', color='grey')
-plt.axvline(0.4, ls='--', color='grey')
+# f = plt.figure()
+# plt.scatter(all_norm_rate, all_norm_rate)
+# plt.axhline(0.2, ls='--', color='grey')
+# plt.axvline(0.2, ls='--', color='grey')
+# plt.axhline(0.4, ls='--', color='grey')
+# plt.axvline(0.4, ls='--', color='grey')
 
-plt.ylabel('Right ALM')
-plt.xlabel('Left ALM')
+# plt.ylabel('Right ALM')
+# plt.xlabel('Left ALM')
+
+#%% Effect of stim per shank:
+path = r'G:\ephys_data\CW61\python\2025_03_08'
+stim_spk, ctl_spk = [],[]
+
+s1 = Session(path, passive=False)# , filter_low_perf=False)#, side='R')
+sided_neurons = s1.R_alm_idx
+
+stim_trials = s1.i_good_R_stim_trials
+window = (s1.delay + 0 , s1.delay + 0.5) # First second of delay
+
+all_norm_rate, all_norm_rate_err = [], []
+
+for i in range(1,5):
+    stim_spk, ctl_spk = [],[]
+
+    for n in sided_neurons:
+    
+        if s1.shank[n] == i:
+        
+            ctl_rate = s1.get_spike_rate(n, window, s1.i_good_non_stim_trials)
+            stim_rate = s1.get_spike_rate(n, window, stim_trials)
+            if ctl_rate < 1:
+                continue
+            if stim_rate > ctl_rate:
+                continue
+            stim_spk += [stim_rate]
+            ctl_spk += [ctl_rate]
+    all_norm_rate += [np.mean(np.array(stim_spk) / np.array(ctl_spk))]
+    all_norm_rate_err += [np.std(np.array(stim_spk) / np.array(ctl_spk)) / np.sqrt(len(stim_spk))]
+        
+    f = plt.figure()
+    plt.scatter(ctl_spk, stim_spk, color='blue')
+    plt.plot([0, max(ctl_spk)], [0, max(ctl_spk)], ls='--', color='black')
+    plt.ylabel('Photoinhibition (spks/s)')
+    plt.xlabel('Control (spks/s)')
+    plt.title('{}'.format(s1.path))
+    plt.show()
+
+f = plt.figure()
+plt.errorbar(range(len(all_norm_rate)), all_norm_rate, yerr=all_norm_rate_err, fmt='o', capsize=5, ecolor='black', elinewidth=1.5)
+plt.ylabel('Normalized spike rate (spk/s) (stim/ctl)')
+plt.axhline(0.2, ls='--', color='red')
+plt.axhline(0.4, ls='--', color='grey')
+plt.ylim(0, 0.85)
+plt.xlabel('FOVs')
+
 #%% Deep dive into PSTH of one session:
     
 path = r'G:\ephys_data\CW63\python\2025_03_22'
