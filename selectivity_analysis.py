@@ -104,16 +104,22 @@ left_choice_sel, right_choice_sel = [],[]
 
 
 
-for path in cat(all_expert_paths):
+for path in cat(all_learning_paths):
     s1 = Session(path, passive=False, side='L')
 
     p=0.05/len(s1.good_neurons)
 
     delay_neurons = s1.get_epoch_selective(epoch=(s1.delay, s1.response), p=p)
     sample_neurons = s1.get_epoch_selective(epoch=(s1.sample, s1.delay), p=p)
-    response_neurons = s1.get_epoch_selective(epoch=(s1.response, s1.response + 2), p=p)
+    response_neurons = s1.get_epoch_selective(epoch=(s1.response, s1.response + 2.5), p=p)
+    
+    epochs = [[(s1.delay, s1.response) for _ in range(len(delay_neurons))],
+                [(s1.sample, s1.delay) for _ in range(len(sample_neurons))],
+                [(s1.response, s1.response + 2.5) for _ in range(len(response_neurons))]]
+    epochs = cat([t for t in epochs if len(t) != 0])
+    
     sel, _ = s1.plot_selectivity(cat([delay_neurons, sample_neurons, response_neurons]).astype(int), 
-                                 binsize=200, timestep=50, return_pref_np=False)
+                                 binsize=200, timestep=50, return_pref_np=False, epoch=epochs)
     
     if len(left_sel) == 0:
         left_sel = np.array(sel)
@@ -132,19 +138,26 @@ for path in cat(all_expert_paths):
     sample_sel = s1.count_significant_neurons_by_time(s1.good_neurons, mode='stimulus')
     delay_sel = s1.count_significant_neurons_by_time(s1.good_neurons, mode='choice')
     
-    left_sample_sel += [np.array(sample_sel) / len(s1.good_neurons)]
-    left_choice_sel += [np.array(delay_sel) / len(s1.good_neurons)]
-
+    if len(sample_sel) != 0:
+        left_sample_sel += [np.array(sample_sel) / len(s1.good_neurons)]
+    if len(delay_sel) != 0:
+        left_choice_sel += [np.array(delay_sel) / len(s1.good_neurons)]
     
     s1 = Session(path, passive=False, side='R')
 
     p=0.05/len(s1.good_neurons)
 
-    delay_neurons = s1.get_epoch_selective(epoch=(s1.delay, s1.response), p=0.05)
-    sample_neurons = s1.get_epoch_selective(epoch=(s1.sample, s1.delay), p=0.05)
-    response_neurons = s1.get_epoch_selective(epoch=(s1.response, s1.response + 2), p=0.05)
+    delay_neurons = s1.get_epoch_selective(epoch=(s1.delay, s1.response), p=p)
+    sample_neurons = s1.get_epoch_selective(epoch=(s1.sample, s1.delay), p=p)
+    response_neurons = s1.get_epoch_selective(epoch=(s1.response, s1.response + 2.5), p=p)
+    
+    epochs = [[(s1.delay, s1.response) for _ in range(len(delay_neurons))],
+                [(s1.sample, s1.delay) for _ in range(len(sample_neurons))],
+                [(s1.response, s1.response + 2.5) for _ in range(len(response_neurons))]]
+    epochs = cat([t for t in epochs if len(t) != 0])
+    
     sel, time = s1.plot_selectivity(cat([delay_neurons, sample_neurons, response_neurons]).astype(int), 
-                                    binsize=200, timestep=50, return_pref_np=False)
+                                    binsize=200, timestep=50, return_pref_np=False, epoch=epochs)
     
     if len(right_sel) == 0:
         right_sel = np.array(sel)
@@ -159,8 +172,10 @@ for path in cat(all_expert_paths):
     sample_sel = s1.count_significant_neurons_by_time(s1.good_neurons, mode='stimulus')
     delay_sel = s1.count_significant_neurons_by_time(s1.good_neurons, mode='choice')  
     
-    right_sample_sel += [np.array(sample_sel) / len(s1.good_neurons)]
-    right_choice_sel += [np.array(delay_sel) / len(s1.good_neurons)]
+    if len(sample_sel) != 0:
+        right_sample_sel += [np.array(sample_sel) / len(s1.good_neurons)]
+    if len(delay_sel) != 0:
+        right_choice_sel += [np.array(delay_sel) / len(s1.good_neurons)]
 
 # leftpref, leftnonpref = cat(leftpref), cat(leftnonpref)
 # rightpref, rightnonpref = cat(rightpref), cat(rightnonpref)
@@ -200,8 +215,8 @@ axarr[0,1].fill_between(time, rightsel - rightsel_error,
           rightsel + rightsel_error,
           color=['darkgray'])
 
-axarr[0,0].set_title('Left ALM (n={})'.format(leftsel.shape[0]))
-axarr[0,1].set_title('Right ALM (n={})'.format(rightsel.shape[0]))
+axarr[0,0].set_title('Left ALM (n={})'.format(left_sel.shape[0]))
+axarr[0,1].set_title('Right ALM (n={})'.format(right_sel.shape[0]))
 axarr[0,0].axhline(0, color='grey', ls='--')
 axarr[0,1].axhline(0, color='grey', ls='--')
 windows = np.arange(-0.2, s1.time_cutoff, 0.2)

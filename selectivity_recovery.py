@@ -545,6 +545,9 @@ for path in all_paths:
     all_norm_rate_err += [np.std(np.array(stim_spk) / np.array(ctl_spk)) / np.sqrt(len(stim_spk))]
 
 
+#%% Plot the variability across sessions for individual mice (fig S5 of chen et al 2021)
+
+
 
 
 

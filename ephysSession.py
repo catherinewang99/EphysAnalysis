@@ -1206,26 +1206,58 @@ class Session:
         return len(n)
     
     def shuffle_test_fast(self, spikes_A, spikes_B, n_shuffles=1000):
-        """Fast shuffle test using precomputed spike arrays (1D arrays)"""
-        all_spikes = np.concatenate([spikes_A, spikes_B])
-        n_A = len(spikes_A)
-        n_B = len(spikes_B)
-        total = n_A + n_B
-        actual_prob, _ = self.compute_preference_probability(spikes_A, spikes_B)
+        """Fast shuffle test using precomputed spike arrays (1D arrays)
+            Spikes_A is always the preferred direction
+        
+        """
+        # all_spikes = np.concatenate([spikes_A, spikes_B])
+        # n_A = len(spikes_A)
+        # n_B = len(spikes_B)
+        # total = n_A + n_B
+        prob_groupA, total_groupA = self.compute_preference_probability(spikes_A[0], spikes_B[0])
+        prob_groupB, total_groupB = self.compute_preference_probability(spikes_A[1], spikes_B[1])
     
-        if n_A == 0 or n_B == 0:
-            return np.nan, np.nan
+        actual_prob = (prob_groupA + prob_groupB) / (total_groupA + total_groupB)
+        # if n_A == 0 or n_B == 0:
+        #     return np.nan, np.nan
     
         # Use numpy for fast shuffling
         shuffle_probs = np.empty(n_shuffles)
-        for i in range(n_shuffles):
-            idx = np.random.permutation(total)
-            shuffled_A = all_spikes[idx[:n_A]]
-            shuffled_B = all_spikes[idx[n_A:]]
-            shuffle_probs[i], _ = self.compute_preference_probability(shuffled_A, shuffled_B)
-    
+        for i in range(n_shuffles): # 1000 shuffles
+            # Get a value for each comparison group
+            numerator, denominator = 0,0
+            for j in range(2):
+                idx = np.random.permutation(len(spikes_A[j]) + len(spikes_B[j]))
+                all_spikes = np.concatenate([spikes_A[j], spikes_B[j]])
+                shuffled_A = all_spikes[idx[:len(spikes_A[j])]]
+                shuffled_B = all_spikes[idx[len(spikes_A[j]):]]
+                probgroup, totalgroup = self.compute_preference_probability(shuffled_A, shuffled_B)
+                numerator += probgroup
+                denominator += totalgroup
+                
+            shuffle_probs[i] = numerator / denominator
+            
         p_val = np.mean(shuffle_probs >= actual_prob)
         return actual_prob, p_val
+    
+                
+    def compute_preference_probability(self, group_A, group_B):
+        A = np.array(group_A)
+        B = np.array(group_B)
+        total = len(A) * len(B)
+        if total == 0:
+            return np.nan, None
+    
+        comp_A = np.sum(A[:, None] > B[None, :]) 
+    
+        return comp_A, total
+        # comp_B = np.sum(B[:, None] > A[None, :]) / total
+    
+        # if comp_A >= comp_B:
+        #     return comp_A, 'A'
+        # else:
+        #     return comp_B, 'B'
+
         
     def shuffle_test(self, neuron, trials_A, trials_B, time_bin, n_shuffles=1000):
         all_trials = np.array(trials_A + trials_B)
@@ -1270,11 +1302,31 @@ class Session:
             a given mode."""
         
         neurons = np.array(neurons)
-        self.CR_trials = [i for i in np.where(self.R_correct)[0] if i in self.i_good_non_stim_trials]
-        self.EL_trials = [i for i in np.where(self.L_wrong)[0] if i in self.i_good_non_stim_trials]
-        self.ER_trials = [i for i in np.where(self.R_wrong)[0] if i in self.i_good_non_stim_trials]
-        self.CL_trials = [i for i in np.where(self.L_correct)[0] if i in self.i_good_non_stim_trials]
+        self.CR_trials = np.array([i for i in np.where(self.R_correct)[0] if i in self.i_good_non_stim_trials])
+        self.EL_trials = np.array([i for i in np.where(self.L_wrong)[0] if i in self.i_good_non_stim_trials])
+        self.ER_trials = np.array([i for i in np.where(self.R_wrong)[0] if i in self.i_good_non_stim_trials])
+        self.CL_trials = np.array([i for i in np.where(self.L_correct)[0] if i in self.i_good_non_stim_trials])
     
+        if len(self.CR_trials) < 6 or len(self.EL_trials) < 6 or len(self.ER_trials) < 6 or len(self.CL_trials) < 6:
+            print('Fewer than 5 trials in group for {}'.format(self.path))
+            return []
+        
+        hold_out_trial_num = int(min([len(self.CR_trials), len(self.EL_trials), len(self.ER_trials), len(self.CL_trials)]) / 2)
+        CR_indices = np.random.choice(range(len(self.CR_trials)), hold_out_trial_num, replace=False)
+        EL_indices = np.random.choice(range(len(self.EL_trials)), hold_out_trial_num, replace=False)
+        ER_indices = np.random.choice(range(len(self.ER_trials)), hold_out_trial_num, replace=False)
+        CL_indices = np.random.choice(range(len(self.CL_trials)), hold_out_trial_num, replace=False)
+        
+        self.CR_out_trials = self.CR_trials[CR_indices]
+        self.EL_out_trials = self.EL_trials[EL_indices]
+        self.ER_out_trials = self.ER_trials[ER_indices]
+        self.CL_out_trials = self.CL_trials[CL_indices]
+
+        self.CR_in_trials = np.setdiff1d(self.CR_trials, self.CR_out_trials, assume_unique=True)
+        self.EL_in_trials = np.setdiff1d(self.EL_trials, self.EL_out_trials, assume_unique=True)
+        self.ER_in_trials = np.setdiff1d(self.ER_trials, self.ER_out_trials, assume_unique=True)
+        self.CL_in_trials = np.setdiff1d(self.CL_trials, self.CL_out_trials, assume_unique=True)
+
         mode_pairs = {
                'stimulus': [('CR', 'EL'), ('ER', 'CL')],
                'choice': [('CR', 'ER'), ('EL', 'CL')],
@@ -1294,41 +1346,39 @@ class Session:
             # Cache spike counts per neuron per trial group for this time window
             spike_cache = {
                 neuron: {
-                    group_name: np.array(self.get_spike_count(neuron, time_window, getattr(self, f"{group_name}_trials")))
+                    group_name: np.array(self.get_spike_count(neuron, time_window, getattr(self, f"{group_name}_in_trials")))
+                    for group_name in ['CR', 'EL', 'ER', 'CL']
+                } for neuron in neurons
+            }
+            
+            spike_cache_out = {
+                neuron: {
+                    group_name: np.array(self.get_spike_count(neuron, time_window, getattr(self, f"{group_name}_out_trials")))
                     for group_name in ['CR', 'EL', 'ER', 'CL']
                 } for neuron in neurons
             }
             
             for neuron in neurons:
-                for group_A_name, group_B_name in comparisons:
-                    spikes_A = spike_cache[neuron][group_A_name]
-                    spikes_B = spike_cache[neuron][group_B_name]
-    
-                    _, p_val = self.shuffle_test_fast(spikes_A, spikes_B, n_shuffles=n_shuffles)
-    
-                    if not np.isnan(p_val) and p_val < alpha:
-                        sig_neurons += 1
-                        break  # move on to next neuron once one comparison is significant
+                                
+                spikes_A_out = cat([spike_cache_out[neuron][group_A_name] for group_A_name, _ in comparisons])
+                spikes_B_out = cat([spike_cache_out[neuron][group_B_name] for _, group_B_name in comparisons]) 
+                
+                spikes_A = [spike_cache[neuron][group_A_name] for group_A_name, _ in comparisons]
+                spikes_B = [spike_cache[neuron][group_B_name] for _, group_B_name in comparisons]
+                
+                if sum(spikes_A_out) < sum(spikes_B_out): # Switch pref
+                    spikes_A, spikes_B = spikes_B, spikes_A    
+                
+                _, p_val = self.shuffle_test_fast(spikes_A, spikes_B, n_shuffles=n_shuffles)
+
+                if not np.isnan(p_val) and p_val < alpha:
+                    sig_neurons += 1
+                    # break  # move on to next neuron once one comparison is significant
     
             sig_counts[time_idx] = sig_neurons
     
         return sig_counts
 
-
-    def compute_preference_probability(self, group_A, group_B):
-        A = np.array(group_A)
-        B = np.array(group_B)
-        total = len(A) * len(B)
-        if total == 0:
-            return np.nan, None
-    
-        comp_A = np.sum(A[:, None] > B[None, :]) / total
-        comp_B = np.sum(B[:, None] > A[None, :]) / total
-    
-        if comp_A >= comp_B:
-            return comp_A, 'A'
-        else:
-            return comp_B, 'B'
 
             
     
@@ -1452,14 +1502,14 @@ class Session:
             epoch = (self.response-1.5, self.response) # Late delay
             
         
-        def process_neurons(n):
+        def process_neurons(n, e):
             n_pref, n_nonpref = [],[]
             sel = []
             # start = time_.time()
 
             for _ in range(30):
     
-                L_pref, screenl, screenr = self.screen_preference(n, epoch, bootstrap=bootstrap)
+                L_pref, screenl, screenr = self.screen_preference(n, e, bootstrap=bootstrap)
     
                 if correct_only:
                     
@@ -1529,7 +1579,7 @@ class Session:
         else:
             results = []
             executor = ThreadPoolExecutor(max_workers=2)
-            iterator = executor.map(process_neurons, neurons)
+            iterator = executor.map(process_neurons, neurons, epoch)
             
             iterator = tqdm(iterator, total=len(neurons), desc="Computing selectivity")
         

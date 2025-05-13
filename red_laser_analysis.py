@@ -29,7 +29,7 @@ import behavior
 path = r'G:\ephys_data\CW63\python\2025_03_21'
 # path = r'G:\ephys_data\CW61\python\2025_03_12'
 path = r'J:\ephys_data\CW53\python\2025_01_31'
-path = r'G:\ephys_data\CW59\python\2025_02_27'
+# path = r'G:\ephys_data\CW59\python\2025_02_27'
 passive=False
 s1 = Session(path, passive=passive, filter_low_perf=False, filter_by_stim=False, laser = 'red')
 
@@ -47,12 +47,12 @@ for n in s1.L_alm_idx:
 frac_supr, frac_exc, frac_none = sum(np.array(sig_effect) == -1), sum(np.array(sig_effect) == 1), sum(np.array(sig_effect) == 0)
 l_info = np.array([frac_supr, frac_exc, frac_none]) / len(s1.L_alm_idx)
 
-sig_effect = []
+sig_effect_R = []
 for n in s1.R_alm_idx:
     val = s1.stim_effect_per_neuron(n, stim_trials, window=window, p=0.0001)
-    sig_effect += [val]    
+    sig_effect_R += [val]    
     
-frac_supr, frac_exc, frac_none = sum(np.array(sig_effect) == -1), sum(np.array(sig_effect) == 1), sum(np.array(sig_effect) == 0)
+frac_supr, frac_exc, frac_none = sum(np.array(sig_effect_R) == -1), sum(np.array(sig_effect_R) == 1), sum(np.array(sig_effect_R) == 0)
 r_info = np.array([frac_supr, frac_exc, frac_none]) / len(s1.R_alm_idx)
 
 plt.bar(np.arange(3) - 0.2, l_info, 0.4, color='red', label='Left')
@@ -69,13 +69,13 @@ idx = np.where(np.array(sig_effect) == -1)[0]
 
 s1.plot_raster_and_PSTH(s1.R_alm_idx[idx[3]], opto=True, stimside = 'L')
 
-#%% Red laser passive analysis - plot overall effect on ppyr neurons
+#%% Scatter analysis - plot overall effect on ppyr neurons
 path = r'G:\ephys_data\CW63\python\2025_03_21'
 # path = r'G:\ephys_data\CW61\python\2025_03_12'
 path = r'J:\ephys_data\CW53\python\2025_01_31'
-path = r'G:\ephys_data\CW59\python\2025_02_27'
+# path = r'G:\ephys_data\CW59\python\2025_02_27'
 
-passive=True
+passive=False
 s1 = Session(path, passive=passive, filter_low_perf=False, filter_by_stim=False, laser = 'red')
 
 
@@ -90,7 +90,10 @@ window = (0.57, 0.57+1.3) if passive else (0.57, 0.57+2.3)
 stim_spk, ctl_spk = [],[]
 middle_neurons, pint = [], []
 norm_rate = []
-for n in sided_neurons:
+f = plt.figure()
+
+for i in range(len(sided_neurons)):
+    n = sided_neurons[i]
     ctl_rate = s1.get_spike_rate(n, window, control_trials)
     # if ctl_rate < 1:
     #     continue
@@ -107,9 +110,13 @@ for n in sided_neurons:
     
     # if stim_rate/ctl_rate > 0.4 and stim_rate/ctl_rate < 1:
     #     middle_neurons += [n]
+    color='orange' if sig_effect[i] == 1 else 'blue'
+    if sig_effect[i] == 0:
+        color = 'grey'
+    plt.scatter(ctl_rate, stim_rate, color=color)
+
+# plt.scatter(ctl_spk, stim_spk, color=color)
     
-f = plt.figure()
-plt.scatter(ctl_spk, stim_spk, color='blue')
 plt.plot([0, max(ctl_spk)], [0, max(ctl_spk)], ls='--', color='black')
 plt.ylabel('Photoinhibition (spks/s)')
 plt.xlabel('Control (spks/s)')
