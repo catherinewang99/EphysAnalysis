@@ -90,6 +90,67 @@ all_naive_paths = [
                     ]
 
 
+#%% Just selectivity plot
+
+left_sel, right_sel = [], []
+for path in cat(all_expert_paths):
+    s1 = Session(path, passive=False, side='L')
+
+    p=0.05/len(s1.good_neurons)
+    all_neurons = s1.get_epoch_selective(epoch=(s1.sample, s1.response + 2.5), p=p)
+    epochs = [(s1.sample, s1.response + 2.5) for _ in range(len(all_neurons))]
+    sel, _ = s1.plot_selectivity(all_neurons, binsize=200, timestep=50, return_pref_np=False, epoch=epochs)
+    
+    if len(left_sel) == 0:
+        left_sel = np.array(sel)
+    else:
+        left_sel = np.vstack((left_sel, sel))
+
+    s1 = Session(path, passive=False, side='R')
+
+    p=0.05/len(s1.good_neurons)
+    all_neurons = s1.get_epoch_selective(epoch=(s1.sample, s1.response + 2.5), p=p)
+    epochs = [(s1.sample, s1.response + 2.5) for _ in range(len(all_neurons))]
+    sel, time = s1.plot_selectivity(all_neurons, binsize=200, timestep=50, return_pref_np=False, epoch=epochs)
+    
+    if len(right_sel) == 0:
+        right_sel = np.array(sel)
+    else:
+        right_sel = np.vstack((right_sel, sel)) 
+        
+windows = np.arange(-0.2, s1.time_cutoff, 0.2)
+
+leftsel = np.mean(left_sel, axis=0)
+rightsel = np.mean(right_sel, axis=0)
+leftsel_error = np.std(left_sel, axis=0) / np.sqrt(len(left_sel))
+rightsel_error = np.std(right_sel, axis=0) / np.sqrt(len(right_sel))
+
+windows = windows[:-1]
+
+#Plot all
+f, axarr = plt.subplots(1,2, figsize=(10,5), sharey='row', sharex='col')
+
+axarr[0].plot(time, leftsel, color='black')
+axarr[0].fill_between(time, leftsel - leftsel_error, 
+          leftsel + leftsel_error,
+          color=['darkgray'])
+axarr[0].set_ylabel('Selectivity (spikes/s)')
+
+
+axarr[1].plot(time, rightsel, color='black')
+axarr[1].fill_between(time, rightsel - rightsel_error, 
+          rightsel + rightsel_error,
+          color=['darkgray'])
+
+axarr[0].set_title('Left ALM (n={})'.format(left_sel.shape[0]))
+axarr[1].set_title('Right ALM (n={})'.format(right_sel.shape[0]))
+axarr[0].axhline(0, color='grey', ls='--')
+axarr[1].axhline(0, color='grey', ls='--')
+for j in range(2):
+    axarr[j].axvline(s1.sample, color = 'grey', alpha=0.5, ls = '--')
+    axarr[j].axvline(s1.delay, color = 'grey', alpha=0.5, ls = '--')
+    axarr[j].axvline(s1.response, color = 'grey', alpha=0.5, ls = '--')
+    
 #%% Aggregate over all FOVs for this analysis - TAKES LONG TIME :^(
 
 
@@ -104,7 +165,7 @@ left_choice_sel, right_choice_sel = [],[]
 
 
 
-for path in cat(all_learning_paths):
+for path in cat(all_expert_paths):
     s1 = Session(path, passive=False, side='L')
 
     p=0.05/len(s1.good_neurons)

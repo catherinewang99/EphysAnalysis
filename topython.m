@@ -3,7 +3,7 @@ addpath('./func/')
 
 % path = 'H:\ephys_data\CW47\';
 path = 'G:\ephys_data\CW61\';
-path = 'J:\ephys_data\CW53\';
+% path = 'J:\ephys_data\CW53\';
 
 mkdir([path 'python'])
 
