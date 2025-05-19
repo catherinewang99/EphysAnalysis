@@ -454,6 +454,7 @@ class Session:
         """
         
         keep_n = []
+        p_sst_n = []
         window = (self.delay, self.delay+1)
         for n in self.good_neurons:
                 
@@ -464,9 +465,14 @@ class Session:
             if stim_rate < ctl_rate:
                 
                 keep_n += [n]
+            
+            else:
+                
+                p_sst_n += [n]
                 
         self.good_neurons = keep_n
 
+        self.sst_neurons = p_sst_n
     
     ### NEURAL FUNCTIONS ###
     
