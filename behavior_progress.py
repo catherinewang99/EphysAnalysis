@@ -20,6 +20,51 @@ cat = np.concatenate
 plt.rcParams['pdf.fonttype'] = '42' 
 
 from ephysSession import Session
+#%% Paths
+
+all_learning_paths_stimcorrected = [[r'G:\ephys_data\CW63\python\2025_03_19',
+                          r'G:\ephys_data\CW63\python\2025_03_20',         
+                          r'G:\ephys_data\CW63\python\2025_03_22',         
+                           # r'G:\ephys_data\CW63\python\2025_03_23',         
+                          r'G:\ephys_data\CW63\python\2025_03_25',],
+                          
+                          [r'G:\ephys_data\CW61\python\2025_03_08',
+                           # r'G:\ephys_data\CW61\python\2025_03_09', 
+                           r'G:\ephys_data\CW61\python\2025_03_10', 
+                           r'G:\ephys_data\CW61\python\2025_03_11', 
+                           # r'G:\ephys_data\CW61\python\2025_03_12', 
+                           # r'G:\ephys_data\CW61\python\2025_03_14', 
+                           r'G:\ephys_data\CW61\python\2025_03_17', 
+                           # r'G:\ephys_data\CW61\python\2025_03_18', 
+                           ],
+                          [r'J:\ephys_data\CW54\python\2025_02_01',
+                           r'J:\ephys_data\CW54\python\2025_02_03']
+                          ]
+
+all_expert_paths = [[
+                        # r'J:\ephys_data\CW49\python\2024_12_11',
+                        # r'J:\ephys_data\CW49\python\2024_12_12',
+                        r'J:\ephys_data\CW49\python\2024_12_13',
+                        # r'J:\ephys_data\CW49\python\2024_12_14',
+                        # r'J:\ephys_data\CW49\python\2024_12_15',
+                        # r'J:\ephys_data\CW49\python\2024_12_16',
+                
+                          ],
+                    [
+                        r'J:\ephys_data\CW53\python\2025_01_27',
+                        r'J:\ephys_data\CW53\python\2025_01_28',
+                        r'J:\ephys_data\CW53\python\2025_01_29',
+                        # r'J:\ephys_data\CW53\python\2025_01_30',
+                        r'J:\ephys_data\CW53\python\2025_02_01',
+                        r'J:\ephys_data\CW53\python\2025_02_02',
+                          ],
+                    
+                    [r'G:\ephys_data\CW59\python\2025_02_22',
+                     r'G:\ephys_data\CW59\python\2025_02_24',
+                     r'G:\ephys_data\CW59\python\2025_02_25',
+                     r'G:\ephys_data\CW59\python\2025_02_26',
+                     r'G:\ephys_data\CW59\python\2025_02_28',
+                     ]]
 
 
 #%% Plot learning progression
@@ -27,26 +72,43 @@ from ephysSession import Session
 # b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW48\python_behavior', behavior_only=True)
 # b.learning_progression(window = 50)
 
-b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW49\python_behavior', behavior_only=True)
-b.learning_progression(window = 50,  color_background=range(15)) # All but the last 6 days
+# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW49\python_behavior', behavior_only=True)
+# b.learning_progression(window = 50,  color_background=range(15)) # All but the last 6 days
 
-b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW53\python_behavior', behavior_only=True)
-b.learning_progression(window = 75, color_background=range(36))
+# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW53\python_behavior', behavior_only=True)
+# b.learning_progression(window = 75, color_background=range(36))
+# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW49t\python_behavior', behavior_only=True)
+# b.learning_progression(window = 75, early_lick_ylim=False)
 
-b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW59\python_behavior', behavior_only=True)
-b.learning_progression(window = 75, color_background=range(22))
+# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW53t\python_behavior', behavior_only=True)
+# b.learning_progression(window = 75, early_lick_ylim=False)
 
-b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW61\python_behavior', behavior_only=True)
-b.learning_progression(window = 75, color_background=range(36))
+# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW59\python_behavior', behavior_only=True)
+# b.learning_progression(window = 75, color_background=range(22))
 
-b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW63\python_behavior', behavior_only=True)
-b.learning_progression(window = 75, color_background=range(17))
+# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW59t\python_behavior', behavior_only=True)
+# b.learning_progression(window = 75, early_lick_ylim=False)#, color_background=range(22))
+
+# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW61\python_behavior', behavior_only=True)
+# b.learning_progression(window = 75, color_background=range(36))
+
+b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW57\python_behavior', behavior_only=True)
+b.learning_progression(window = 75, color_background=range(33))
+
+b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW60\python_behavior', behavior_only=True)
+b.learning_progression(window = 75, color_background=range(48))
+
+b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW62\python_behavior', behavior_only=True)
+b.learning_progression(window = 75, color_background=range(59))
+
+# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW63\python_behavior', behavior_only=True)
+# b.learning_progression(window = 75, color_background=range(17))
 
 # b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW54t\python_behavior', behavior_only=True)
 # b.learning_progression(window = 75)#, color_background=range(31))
 
-b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW54\python_behavior', behavior_only=True)
-b.learning_progression(window = 50, color_background=range(25))
+# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW54\python_behavior', behavior_only=True)
+# b.learning_progression(window = 50, color_background=range(25))
 
 # b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW62\python_behavior', behavior_only=True)
 # b.learning_progression(window = 50, color_background=range(4))
@@ -160,6 +222,111 @@ plt.xticks([0,1],['Left stim', 'Right stim'])
 
 plt.show()
 
+#%% Behavioral effect of stim per mouse
+
+paths = [r'G:\ephys_data\CW59\python\2025_02_22',
+ r'G:\ephys_data\CW59\python\2025_02_24',
+ r'G:\ephys_data\CW59\python\2025_02_25',
+ r'G:\ephys_data\CW59\python\2025_02_26',
+ r'G:\ephys_data\CW59\python\2025_02_28',
+ ]
+paths = [
+                        r'J:\ephys_data\CW49\python\2024_12_11',
+                        r'J:\ephys_data\CW49\python\2024_12_12',
+                        r'J:\ephys_data\CW49\python\2024_12_13',
+                        r'J:\ephys_data\CW49\python\2024_12_14',
+                        r'J:\ephys_data\CW49\python\2024_12_15',
+                        r'J:\ephys_data\CW49\python\2024_12_16',
+                
+                          ]
+paths = [r'J:\ephys_data\CW54\python\2025_02_01',
+ r'J:\ephys_data\CW54\python\2025_02_03']
+
+paths = [r'G:\ephys_data\CW61\python\2025_03_08',
+ # r'G:\ephys_data\CW61\python\2025_03_09', 
+ r'G:\ephys_data\CW61\python\2025_03_10', 
+ r'G:\ephys_data\CW61\python\2025_03_11', 
+ # r'G:\ephys_data\CW61\python\2025_03_12', 
+ # r'G:\ephys_data\CW61\python\2025_03_14', 
+ r'G:\ephys_data\CW61\python\2025_03_17', 
+ # r'G:\ephys_data\CW61\python\2025_03_18', 
+ ]
+# paths = [
+#     r'J:\ephys_data\CW53\python\2025_01_27',
+#     r'J:\ephys_data\CW53\python\2025_01_28',
+#     r'J:\ephys_data\CW53\python\2025_01_29',
+#     # r'J:\ephys_data\CW53\python\2025_01_30',
+#     r'J:\ephys_data\CW53\python\2025_02_01',
+#     r'J:\ephys_data\CW53\python\2025_02_02',
+#       ]
+
+performance_opto_left, performance_opto_right = [], []
+performance_ctl = []
+
+stim_left_performance_opto_left, stim_left_performance_opto_right = [], []
+stim_right_performance_opto_left, stim_right_performance_opto_right = [], []
+performance_ctl_right, performance_ctl_left = [], []
+
+fig = plt.figure()
+
+for path in paths:
+    s1 = Session(path, passive=False, filter_low_perf=True)
+    # all_stim_trials = np.where(s1.stim_ON)[0]
+    # left_stim_trials = [i for i in np.where(s1.stim_side == 'L')[0] if i in all_stim_trials]
+    # right_stim_trials = [i for i in np.where(s1.stim_side == 'R')[0] if i in all_stim_trials]
+    # control_trials = np.where(~s1.stim_ON)[0]
+    
+    left_stim_trials = s1.i_good_L_stim_trials
+    right_stim_trials = s1.i_good_R_stim_trials
+    control_trials = s1.i_good_non_stim_trials
+    
+    perf_right, perf_left, perf_all = s1.performance_in_trials(left_stim_trials)
+    performance_opto_left += [perf_all]
+    stim_left_performance_opto_left += [perf_left]
+    stim_left_performance_opto_right += [perf_right]
+    
+    
+    perf_rightctl, perf_leftctl, perf_all = s1.performance_in_trials(control_trials)
+    performance_ctl += [perf_all]
+    performance_ctl_right += [perf_rightctl]
+    performance_ctl_left += [perf_leftctl]
+    
+    plt.plot([0 - 0.2, 0 + 0.2], [perf_rightctl, perf_right], color='blue', alpha=0.3)
+    plt.plot([0 - 0.2, 0 + 0.2], [perf_leftctl, perf_left], color='red', alpha=0.3)
+    # plt.scatter(0 - 0.2, perf_rightctl, c='b', marker='o')
+    # plt.scatter(0 - 0.2, perf_leftctl, c='r', marker='o')
+    # plt.scatter(0 - 0.2, perf_all, facecolors='white', edgecolors='black')
+    # plt.scatter(0 + 0.2, perf_right, c='b', marker='o')
+    # plt.scatter(0 + 0.2, perf_left, c='r', marker='o')
+    
+    perf_right, perf_left, perf_all = s1.performance_in_trials(right_stim_trials)
+    performance_opto_right += [perf_all]
+    stim_right_performance_opto_left += [perf_left]
+    stim_right_performance_opto_right += [perf_right]
+    
+    plt.plot([1 - 0.2, 1 + 0.2], [perf_rightctl, perf_right], color='blue', alpha=0.3)
+    plt.plot([1 - 0.2, 1 + 0.2], [perf_leftctl, perf_left], color='red', alpha=0.3)
+    # plt.scatter(1 - 0.2, perf_rightctl, c='b', marker='o')
+    # plt.scatter(1 - 0.2, perf_leftctl, c='r', marker='o')
+    # plt.scatter(0 - 0.2, perf_all, facecolors='white', edgecolors='black')
+    # plt.scatter(1 + 0.2, perf_right, c='b', marker='o')
+    # plt.scatter(1 + 0.2, perf_left, c='r', marker='o')
+
+
+
+plt.errorbar([-0.2, 0.2], [np.mean(performance_ctl_right), np.mean(stim_left_performance_opto_right)], 
+             yerr = [np.std(performance_ctl_right), np.std(stim_left_performance_opto_right)], marker = 'o', color='blue')
+plt.errorbar([-0.2, 0.2], [np.mean(performance_ctl_left), np.mean(stim_left_performance_opto_left)], 
+             yerr = [np.std(performance_ctl_left), np.std(stim_left_performance_opto_left)], marker = 'o', color='red')
+
+plt.errorbar([1-0.2, 1+0.2], [np.mean(performance_ctl_right), np.mean(stim_right_performance_opto_right)], 
+             yerr = [np.std(performance_ctl_right), np.std(stim_right_performance_opto_right)], marker = 'o', color='blue')
+plt.errorbar([1-0.2, 1+0.2], [np.mean(performance_ctl_left), np.mean(stim_right_performance_opto_left)],
+             yerr = [np.std(performance_ctl_left), np.std(stim_right_performance_opto_left)], marker = 'o', color='red')
+
+plt.xticks([0,1],['Left stim', 'Right stim'])
+plt.ylabel('Performance')
+plt.show()
 #%% Learning speed comparison to normal learning
 
 # Number of trials to reach 70% at <1.3s

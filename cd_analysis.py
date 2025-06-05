@@ -23,6 +23,28 @@ import random
 from scipy import stats
 from statsmodels.stats.proportion import proportions_ztest
 
+
+def unit_vector(vector):
+    """ Returns the unit vector of the vector.  """
+    return vector / np.linalg.norm(vector)
+
+def angle_between(v1, v2):
+    """ Returns the angle in radians between vectors 'v1' and 'v2'::
+
+            >>> angle_between((1, 0, 0), (0, 1, 0))
+            1.5707963267948966
+            >>> angle_between((1, 0, 0), (1, 0, 0))
+            0.0
+            >>> angle_between((1, 0, 0), (-1, 0, 0))
+            3.141592653589793
+    """
+    v1_u = unit_vector(v1)
+    v2_u = unit_vector(v2)
+    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+
+def cos_sim(a,b):
+    return np.dot(a, b)/(np.linalg.norm(a)*np.linalg.norm(b))
+
 #%% Paths
 
 path = r'J:\ephys_data\CW49\python\2024_12_13'
@@ -40,9 +62,55 @@ paths = [
         ]
 path =  r'G:\ephys_data\CW59\python\2025_02_24'
 
-s1 = Mode(path, side='R')#, timestep=1)#, passive=False)
-s1.plot_CD(mode_input='stimulus')
+s1 = Mode(path, side='L')#, timestep=1)#, passive=False)
+s1.plot_CD(mode_input='choice')
+_, _, db, choice = s1.decision_boundary()
 # s1.plot_CD_opto()
+s1.plot_CD_opto(mode_input='stimulus', stim_side = 'L')
+
+#%% Project for  a single trial
+
+
+#%% CD projection endpoints
+path =  r'G:\ephys_data\CW59\python\2025_02_24'
+s1 = Mode(path)
+proj_allDimR, proj_allDimL = s1.plot_CD(mode_input='choice', auto_corr_return=True, single_trial=True)
+
+r_projR, r_projL = proj_allDimR[170:], proj_allDimL[170:]
+l_projR, l_projL = proj_allDimR[:170], proj_allDimL[:170]
+
+f=plt.figure()
+plt.axhline(0, ls = '--', color='black')
+plt.axvline(0, ls = '--', color='black')
+plt.scatter(l_projL, r_projL, color='red')
+plt.scatter(l_projR, r_projR, color='blue')
+
+#%% Decoding accuracies
+l_acc, r_acc = [],[]
+for path in cat(all_expert_paths):
+    s1 = Mode(path, side='L')#, timestep=1)#, passive=False)
+
+    _, _, db, choice = s1.decision_boundary()
+
+    l_acc += [np.mean(choice)]
+
+    s1 = Mode(path, side='R')#, timestep=1)#, passive=False)
+
+    _, _, db, choice = s1.decision_boundary()
+
+    r_acc += [np.mean(choice)]
+
+l_acc= [l if l > 0.5 else 1-l for l in l_acc ]
+r_acc= [l if l > 0.5 else 1-l for l in r_acc ]
+
+f=plt.figure()
+plt.bar([0,1], [np.mean(l_acc), np.mean(r_acc)], 0.4, fill=False)
+plt.scatter(np.zeros(len(l_acc)), l_acc)
+plt.scatter(np.ones(len(r_acc)), r_acc)
+plt.xticks([0,1],['left ALM','right ALM'])
+plt.ylabel('Decoding accuracy')
+plt.ylim(0,1)
+
 
 #%% Aggregate over FOVs
 
@@ -93,6 +161,145 @@ s1.plot_CD_opto(stim_side = 'L')
 s1 = Mode(path, side='L')#, timestep=1)#, passive=False)
 s1.plot_CD_opto(stim_side = 'L')
 
+
+#%% Variable or multiple CDs?
+allpaths = [[
+    r'J:\ephys_data\CW53\python\2025_01_27',
+    r'J:\ephys_data\CW53\python\2025_01_28',
+    r'J:\ephys_data\CW53\python\2025_01_29',
+    # r'J:\ephys_data\CW53\python\2025_01_30',
+    r'J:\ephys_data\CW53\python\2025_02_01',
+    r'J:\ephys_data\CW53\python\2025_02_02',
+      ]]
+
+# allpaths = [[r'G:\ephys_data\CW59\python\2025_02_22',
+#   r'G:\ephys_data\CW59\python\2025_02_24',
+#   r'G:\ephys_data\CW59\python\2025_02_25',
+#   r'G:\ephys_data\CW59\python\2025_02_26',
+#   r'G:\ephys_data\CW59\python\2025_02_28',
+  
+#   ]]
+# Correlation of CDs calculated from non overlapping trials?
+naivepath, learningpath, expertpath = [r'H:\data\BAYLORCW046\python\2024_05_31',
+                    r'H:\data\BAYLORCW046\python\2024_06_11',
+                  r'H:\data\BAYLORCW046\python\2024_06_26',]
+# naivepath, learningpath, expertpath = [r'H:\data\BAYLORCW044\python\2024_05_22',
+#                                       r'H:\data\BAYLORCW044\python\2024_06_06',
+#                                     r'H:\data\BAYLORCW044\python\2024_06_19']
+# naivepath, learningpath, expertpath = [r'H:\data\BAYLORCW044\python\2024_05_23',
+#                                       r'H:\data\BAYLORCW044\python\2024_06_04',
+#                                     r'H:\data\BAYLORCW044\python\2024_06_18']
+# naivepath, learningpath, expertpath = [r'H:\data\BAYLORCW046\python\2024_05_29',
+#                     r'H:\data\BAYLORCW046\python\2024_06_07',
+#                   r'H:\data\BAYLORCW046\python\2024_06_24',]
+# naivepath, learningpath, expertpath =[r'H:\data\BAYLORCW046\python\2024_05_30',
+#                                       r'H:\data\BAYLORCW046\python\2024_06_10',
+#                                       r'H:\data\BAYLORCW046\python\2024_06_27']
+split = 1/2
+splitnum = int(1/split)
+ctl=True
+save=False
+vmin=0 
+vmax=0.8
+side='R'
+
+##LEARNING
+
+
+
+# for path in allpaths[0]:
+    
+#     for _ in range(10):
+
+        # s1 = Mode(path, side='R')#, timestep=1)#, passive=False)
+        # CD_choice, _ = s1.plot_CD()
+
+
+
+
+
+
+
+l1 = Mode(path, side=side)#, timestep=1)#, passive=False)
+
+numr = sum([l1.R_correct[i] for i in l1.i_good_non_stim_trials if not l1.early_lick[i]])
+numl = sum([l1.L_correct[i] for i in l1.i_good_non_stim_trials if not l1.early_lick[i]])
+numr = numr-numr%splitnum if numr%splitnum else numr
+numl = numl-numl%splitnum if numl%splitnum else numl
+r_trials = np.random.permutation(numr) # shuffle the indices
+l_trials = np.random.permutation(numl)
+numr_err = sum([l1.R_wrong[i] for i in l1.i_good_non_stim_trials if not l1.early_lick[i]])
+numl_err = sum([l1.L_wrong[i] for i in l1.i_good_non_stim_trials if not l1.early_lick[i]])
+numr_err = numr_err-numr_err%splitnum if numr_err%splitnum else numr_err
+numl_err = numl_err-numl_err%splitnum if numl_err%splitnum else numl_err
+r_trials_err = np.random.permutation(numr_err) # shuffle the indices
+l_trials_err = np.random.permutation(numl_err)
+
+# First half
+r_train_idx, l_train_idx = r_trials[:int(split * numr)], l_trials[:int(split * numl)] #Take a portion of the trials for train
+r_test_idx, l_test_idx = r_trials[int(split * numr):int(split * 2 * numr)], l_trials[int(split * numl):int(split * 2 * numl)]
+
+r_train_err_idx, l_train_err_idx = r_trials_err[:int(split* numr_err)], l_trials_err[:int(split * numl_err)]
+r_test_err_idx, l_test_err_idx = r_trials_err[int(split* numr_err):int(split*2* numr_err)], l_trials_err[int(split * numl_err):int(split * 2 * numl_err)]
+
+train_test_trials = (r_train_idx, l_train_idx, r_test_idx, l_test_idx)
+train_test_trials_err = (r_train_err_idx, l_train_err_idx, r_test_err_idx, l_test_err_idx)
+
+l1 = Mode(path,  side=side, 
+          train_test_trials = [train_test_trials, train_test_trials_err])
+projR, projL = l1.plot_CD(mode_input = 'choice', plot=False, auto_corr_return=True, ctl=ctl)
+CD_choice, _ = l1.plot_CD(mode_input = 'choice', plot=False, auto_corr_return=False, ctl=ctl)
+if save:
+    l1.plot_CD(ctl=ctl, save=r'H:\Fig 5\CDchoice_20perc_train_test_learning_run1.pdf')
+else:
+    l1.plot_CD(ctl=ctl)
+
+
+#second half
+r_train_idx, l_train_idx = r_trials[int((1-split) * numr):], l_trials[int((1-split) * numl):] #Take a portion of the trials for train
+r_test_idx, l_test_idx = r_trials[int((1-(2*split)) * numr):int((1-split) * numr)], l_trials[int((1-(2*split)) * numl):int((1-split) * numl)]
+
+r_train_err_idx, l_train_err_idx = r_trials_err[int((1-split) * numr_err):], l_trials_err[int((1-split) * numl_err):]
+r_test_err_idx, l_test_err_idx = r_trials_err[int((1-(2*split)) * numr_err):int((1-split) * numr_err)], l_trials_err[int((1-(2*split)) * numl_err):int((1-split) * numl_err)]
+
+train_test_trials = (r_train_idx, l_train_idx, r_test_idx, l_test_idx)
+train_test_trials_err = (r_train_err_idx, l_train_err_idx, r_test_err_idx, l_test_err_idx)
+
+l1 = Mode(path,  side=side, 
+          train_test_trials = [train_test_trials, train_test_trials_err])
+projR1, projL1 = l1.plot_CD(mode_input = 'choice', plot=False, auto_corr_return=True, ctl=ctl)
+CD_choice1, _ = l1.plot_CD(mode_input = 'choice', plot=False, auto_corr_return=False, ctl=ctl)
+if save:
+    l1.plot_CD(ctl=ctl, save=r'H:\Fig 5\CDchoice_20perc_train_test_learning_run2.pdf')
+else:
+    l1.plot_CD(ctl=ctl)
+
+#%% Plot
+
+cos_sim(CD_choice, CD_choice1)
+
+#Plot the autocorrelogram
+f = plt.figure(figsize=(5,5))
+allproj = np.vstack((projR, projL[:, 0]))
+allproj1 = np.vstack((projR1, projL1[:, 0]))
+corrs = np.corrcoef(allproj, allproj1, rowvar=False)
+# corrs = corrs[:l1.time_cutoff, :l1.time_cutoff]
+plt.imshow(corrs, vmin=vmin, vmax=vmax)
+plt.axhline(l1.sample, color = 'white', ls='--', linewidth = 0.5)
+plt.axvline(l1.sample, color = 'white', ls='--', linewidth = 0.5)
+
+plt.axhline(l1.delay, color = 'white', ls='--', linewidth = 0.5)
+plt.axvline(l1.delay, color = 'white', ls='--', linewidth = 0.5)
+
+plt.axhline(l1.response, color = 'white', ls='--', linewidth = 0.5)
+plt.axvline(l1.response, color = 'white', ls='--', linewidth = 0.5)
+
+plt.xticks([l1.sample, l1.delay, l1.response], [-4.3, -3, 0])    
+plt.yticks([l1.sample, l1.delay, l1.response], [-4.3, -3, 0])    
+plt.colorbar()
+if save:
+    plt.savefig(r'H:\Fig 5\CDchoice_20perc_train_test_learning_CORR.pdf')
+plt.show()
 
 
 

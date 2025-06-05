@@ -1615,7 +1615,7 @@ class Session:
                                  return_traces = False, exclude_unselective=False,
                                  binsize=50, timestep=1, epoch = None,
                                  fix_axis = [], selective_neurons = [], downsample=False,
-                                 bootstrap=False):
+                                 bootstrap=False, return_modularity=False):
         
         """Returns overall selectivity trace across opto vs control trials and L / R hemi
         
@@ -1771,6 +1771,7 @@ class Session:
         erro_stimleft_R = np.std(opto_sel_stim_left_R, axis=0) / np.sqrt(len(right_delay_neurons))
         erro_stimright_R = np.std(opto_sel_stim_right_R, axis=0) / np.sqrt(len(right_delay_neurons))
 
+        
         
         if return_traces: # return granular version for aggregating across FOVs
             # Left alm, right alm

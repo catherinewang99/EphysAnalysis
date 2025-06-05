@@ -25,7 +25,7 @@ cat = np.concatenate
 import behavior
 
 
-#%% Proportion of neurons significantly affected by laser
+#%% Proportion of neurons significantly affected by laser -- ppyr
 path = r'G:\ephys_data\CW63\python\2025_03_21'
 # path = r'G:\ephys_data\CW61\python\2025_03_12'
 path = r'J:\ephys_data\CW53\python\2025_01_31'
@@ -64,8 +64,98 @@ plt.ylabel('Proportion of ppyr neurons')
 plt.ylim(0, 0.75)
 plt.show()
 
+#%% Proportion of neurons significantly affected by laser -- fs
+path = r'G:\ephys_data\CW63\python\2025_03_21'
+# path = r'G:\ephys_data\CW61\python\2025_03_12'
+path = r'J:\ephys_data\CW53\python\2025_01_31'
+path = r'G:\ephys_data\CW59\python\2025_02_27'
+passive=False
+
+s1 = Session(path, passive=passive, filter_low_perf=False, filter_by_stim=False, laser = 'red', only_ppyr=False)
+
+window = (0.57, 0.57+1.3) if passive else (0.57, 0.57+2.3) 
+window = (0.57, 0.57+0.1)
+
+stim_trials = np.where(s1.stim_level == 2.7)[0]
+control_trials = np.where(s1.stim_level == 0)[0]
+
+L_alm_fs = [n for n in s1.L_alm_idx if s1.celltype[n] == 1]
+R_alm_fs = [n for n in s1.R_alm_idx if s1.celltype[n] == 1]
+
+
+sig_effect = []
+for n in L_alm_fs:
+    val = s1.stim_effect_per_neuron(n, stim_trials, window=window, p=0.01)
+    sig_effect += [val]    
+    
+frac_supr, frac_exc, frac_none = sum(np.array(sig_effect) == -1), sum(np.array(sig_effect) == 1), sum(np.array(sig_effect) == 0)
+l_info = np.array([frac_supr, frac_exc, frac_none]) / len(L_alm_fs)
+
+# sig_effect_R = []
+# for n in R_alm_fs:
+#     val = s1.stim_effect_per_neuron(n, stim_trials, window=window, p=0.01)
+#     sig_effect_R += [val]    
+    
+# frac_supr, frac_exc, frac_none = sum(np.array(sig_effect_R) == -1), sum(np.array(sig_effect_R) == 1), sum(np.array(sig_effect_R) == 0)
+# r_info = np.array([frac_supr, frac_exc, frac_none]) / len(R_alm_fs)
+
+# plt.bar(np.arange(3) - 0.2, l_info, 0.4, color='red', label='Left')
+# plt.bar(np.arange(3) + 0.2, r_info, 0.4, color='blue', label='Right')
+# plt.xticks(np.arange(3), ['Supr.', 'Exc.', 'None'])
+# plt.legend()
+# plt.title(path)
+# plt.ylabel('Proportion of ppyr neurons')
+# # plt.ylim(0, 0.75)
+# plt.show()
+
+
+
+stim_trials = np.where(s1.stim_level == 2.7)[0]
+control_trials = np.where(s1.stim_level == 0)[0]
+sided_neurons = L_alm_fs
+
+# Plot control vs stim scatter
+    
+# window = (0.57, 0.57+1.3) if passive else (0.57, 0.57+2.3) 
+# window = (0.57, 0.57+2.3) # Behavior
+stim_spk, ctl_spk = [],[]
+middle_neurons, pint = [], []
+norm_rate = []
+f = plt.figure()
+
+for i in range(len(sided_neurons)):
+    n = sided_neurons[i]
+    ctl_rate = s1.get_spike_rate(n, window, control_trials)
+    # if ctl_rate < 1:
+    #     continue
+    stim_rate = s1.get_spike_rate(n, window, stim_trials)
+    # if stim_rate/ctl_rate > 0.55: 
+    #     continue
+    # if stim_rate > ctl_rate: 
+    #     pint = [n]
+    #     continue
+    stim_spk += [stim_rate]
+    ctl_spk += [ctl_rate]
+    
+    norm_rate += [stim_rate / ctl_rate]
+    
+    # if stim_rate/ctl_rate > 0.4 and stim_rate/ctl_rate < 1:
+    #     middle_neurons += [n]
+    color='orange' if sig_effect[i] == 1 else 'blue'
+    if sig_effect[i] == 0:
+        color = 'grey'
+    plt.scatter(ctl_rate, stim_rate, color=color)
+
+# plt.scatter(ctl_spk, stim_spk, color=color)
+    
+plt.plot([0, max(ctl_spk)], [0, max(ctl_spk)], ls='--', color='black')
+plt.ylabel('Photoinhibition (spks/s)')
+plt.xlabel('Control (spks/s)')
+plt.title('{}'.format(s1.path))
+plt.show()
+
 #%% plot single neurons
-idx = np.where(np.array(sig_effect) == -1)[0]
+idx = np.where(np.array(sig_effect) == 1)[0]
 
 s1.plot_raster_and_PSTH(s1.R_alm_idx[idx[3]], opto=True, stimside = 'L')
 

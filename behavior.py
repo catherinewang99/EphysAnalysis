@@ -368,7 +368,8 @@ class Behavior():
         return None
 
     def learning_progression(self, window = 50, save=False, imaging=False,
-                             return_results=False, include_delay = True, color_background = []):
+                             return_results=False, include_delay = True, color_background = [],
+                             early_lick_ylim=True):
         """
         Plot the learning progression with three panels indicating delay duration, performance,
         and early lick rate over sessions
@@ -460,7 +461,8 @@ class Behavior():
             axarr[2].plot(earlylicksarr, 'b')        
             axarr[2].set_ylabel('% Early licks')
             axarr[2].set_xlabel('Trials')
-            axarr[2].set_ylim(0, 0.4)
+            if early_lick_ylim:
+                axarr[2].set_ylim(0, 0.4)
         
         else:
             # Performance
@@ -476,7 +478,8 @@ class Behavior():
             axarr[1].plot(earlylicksarr, 'b')        
             axarr[1].set_ylabel('% Early licks')
             axarr[1].set_xlabel('Trials')
-            axarr[1].set_ylim(0, 0.4)
+            if early_lick_ylim:
+                axarr[1].set_ylim(0, 0.4)
         
         # Color background (optional)
         

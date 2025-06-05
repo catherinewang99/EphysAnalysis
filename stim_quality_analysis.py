@@ -92,6 +92,23 @@ all_naive_paths = [
                    [r'G:\ephys_data\CW65\python\2025_02_25',],
                     ]
 
+#%% Sanity check stim levels
+paths = [
+                        # r'J:\ephys_data\CW49\python\2024_12_11',
+                        # r'J:\ephys_data\CW49\python\2024_12_12',
+                        r'J:\ephys_data\CW49\python\2024_12_13',
+                        r'J:\ephys_data\CW49\python\2024_12_14',
+                        r'J:\ephys_data\CW49\python\2024_12_15',
+                        r'J:\ephys_data\CW49\python\2024_12_16',
+                
+                          ]
+
+# for path in paths:
+#     s1 = Session(path, passive=False)
+#     print(set(s1.stim_level))
+path = r'J:\ephys_data\CW49\python\2024_12_15'
+s1 = Session(path, passive=False)
+
 
 #%% Plot distribution of waveform withs
 

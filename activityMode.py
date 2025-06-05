@@ -932,6 +932,7 @@ class Mode(Session):
                                         self.PSTH_l_train_correct, 
                                         self.PSTH_r_train_error, 
                                         self.PSTH_l_train_error), axis=1)
+        
         good_neurons = self.good_neurons
         
         activityRL_test= np.concatenate((self.PSTH_r_test_correct, 
@@ -984,31 +985,32 @@ class Mode(Session):
         x = self.t
         if single_trial:
             
-            #FIXME: needs to be fixed from imaging to ephys
             
-            r_corr = np.where(self.R_correct)[0]
-            l_corr = np.where(self.L_correct)[0]
+            # r_corr = np.where(self.R_correct)[0]
+            # l_corr = np.where(self.L_correct)[0]
             
-            r_trials = [i for i in r_corr if i in self.i_good_non_stim_trials and not self.early_lick[i]]
-            l_trials = [i for i in l_corr if i in self.i_good_non_stim_trials and not self.early_lick[i]]
+            # r_trials = [i for i in r_corr if i in self.i_good_non_stim_trials and not self.early_lick[i]]
+            # l_trials = [i for i in l_corr if i in self.i_good_non_stim_trials and not self.early_lick[i]]
             
             proj_allDimR = []
             # Project for every trial
             for t in self.r_test_idx:
-                activity = self.dff[0, r_trials[t]][good_neurons] 
+                activity, _, _ = self.get_PSTH_multiple(good_neurons, [t], binsize=self.binsize, timestep = self.timestep)
+
                 activity = activity - np.tile(np.mean(activityRL_train, axis=1)[:, None], (1, activity.shape[1]))
                 proj_allDim = np.dot(activity.T, orthonormal_basis)
-                proj_allDimR += [proj_allDim[:len(self.T_cue_aligned_sel)]]
+                proj_allDimR += [proj_allDim]
     
                 if plot:
                     plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'b', alpha = 0.5,  linewidth = 0.5)
             
             proj_allDimL = []
             for t in self.l_test_idx:
-                activity = self.dff[0, l_trials[t]][good_neurons]
+                activity, _, _ = self.get_PSTH_multiple(good_neurons, [t], binsize=self.binsize, timestep = self.timestep)
+
                 activity = activity - np.tile(np.mean(activityRL_train, axis=1)[:, None], (1, activity.shape[1]))
                 proj_allDim = np.dot(activity.T, orthonormal_basis)
-                proj_allDimL += [proj_allDim[:len(self.T_cue_aligned_sel)]]
+                proj_allDimL += [proj_allDim]
     
                 if plot:
                     plt.plot(x, proj_allDim[:len(self.T_cue_aligned_sel)], 'r', alpha = 0.5, linewidth = 0.5)
@@ -1028,7 +1030,7 @@ class Mode(Session):
                 plt.title('{} decoder projections'.format(mode_input))
                 plt.axvline(self.sample, color = 'grey', alpha=0.5, ls = '--')
                 plt.axvline(self.delay, color = 'grey', alpha=0.5, ls = '--')
-                plt.axvline(0, color = 'grey', alpha=0.5, ls = '--')
+                plt.axvline(self.response, color = 'grey', alpha=0.5, ls = '--')
                 plt.ylabel('CD_{} projection (a.u.)'.format(mode_input))
                 if fix_axis is not None:
                     plt.ylim(fix_axis)
@@ -1467,6 +1469,7 @@ class Mode(Session):
         remove_n : list, optional
             If not empty, remove these neurons from the calculation of decoding acc
         """
+        start = time.time()
         
         idx_map = {'choice': 1, 'action':5, 'stimulus':0}
         idx = idx_map[mode_input]
@@ -1500,35 +1503,38 @@ class Mode(Session):
             
         
         
-        r_corr = np.where(self.R_correct)[0]
-        l_corr = np.where(self.L_correct)[0]
+        # r_corr = np.where(self.R_correct)[0]
+        # l_corr = np.where(self.L_correct)[0]
         
-        r_trials = [i for i in r_corr if i in self.i_good_non_stim_trials and not self.early_lick[i]]
-        l_trials = [i for i in l_corr if i in self.i_good_non_stim_trials and not self.early_lick[i]]
+        r_trials = [i for i in self.i_good_non_stim_trials if not self.early_lick[i] and self.R_correct[i]]
+        l_trials = [i for i in self.i_good_non_stim_trials if not self.early_lick[i] and self.L_correct[i]]
 
         
-        x = np.arange(-6.97,4,self.fs)[:self.time_cutoff]
+        x = self.t
 
         # orthonormal_basis = orthonormal_basis.reshape(-1,1)
         i_pc = 0
         projright, projleft = [], []
         
-        time_point_map = {'choice': self.response-int(1/6*1/self.fs), 'action':self.response+int(7/6*1/self.fs), 'stimulus':self.delay-int(1/6*1/self.fs)}
+        time_point_map = {'choice': self.response-1/6, 'action':self.response+7/6, 'stimulus':self.delay-1/6}
         # DEcode stim using end of delay
         if persistence:
-            time_point_map = {'choice': self.response-int(1/6*1/self.fs), 'action':self.response+int(7/6*1/self.fs), 'stimulus':self.response-int(1/6*1/self.fs)}
+            time_point_map = {'choice': self.response-1/6, 'action':self.response+7/6, 'stimulus':self.response-1/6}
         time_point = time_point_map[mode_input]
-        
+        time_point = np.where(x > time_point)[0][0]
         # Project for every trial in train set for DB
         for t in self.r_train_idx:
-            activity = self.dff[0, r_trials[t]][good_neurons] 
-            activity = activity 
+            activity, _, _ = self.get_PSTH_multiple(good_neurons, [t], binsize=self.binsize, timestep = self.timestep)
+            # activity = self.dff[0, r_trials[t]][good_neurons] # Need a function that grabs all neurons over one trial
+            # activity = activity 
             proj_allDim = np.dot(activity.T, orthonormal_basis)
             projright += [proj_allDim[time_point]]
             
         for t in self.l_train_idx:
-            activity = self.dff[0, l_trials[t]][good_neurons]
-            activity = activity 
+            activity, _, _ = self.get_PSTH_multiple(good_neurons, [t], binsize=self.binsize, timestep = self.timestep)
+
+            # activity = self.dff[0, l_trials[t]][good_neurons]
+            # activity = activity 
             proj_allDim = np.dot(activity.T, orthonormal_basis)
             projleft += [proj_allDim[time_point]]
 
@@ -1578,7 +1584,9 @@ class Mode(Session):
         else:
             # Project for every trial
             for t in self.r_test_idx:
-                activity = self.dff[0, r_trials[t]][good_neurons] 
+                # activity = self.dff[0, r_trials[t]][good_neurons] 
+                activity, _, _ = self.get_PSTH_multiple(good_neurons, [t], binsize=self.binsize, timestep = self.timestep)
+
                 activity = activity - np.tile(np.mean(activityRL_train, axis=1)[:, None], (1, activity.shape[1]))
                 proj_allDim = np.dot(activity.T, orthonormal_basis)
     
@@ -1589,8 +1597,10 @@ class Mode(Session):
                 # plt.scatter(x[time_point],[proj_allDim[time_point]], color='b')
                 
             for t in self.l_test_idx:
-                activity = self.dff[0, l_trials[t]][good_neurons]
-                activity = activity -np.tile(np.mean(activityRL_train, axis=1)[:, None], (1, activity.shape[1]))
+                # activity = self.dff[0, l_trials[t]][good_neurons]
+                activity, _, _ = self.get_PSTH_multiple(good_neurons, [t], binsize=self.binsize, timestep = self.timestep)
+
+                activity = activity - np.tile(np.mean(activityRL_train, axis=1)[:, None], (1, activity.shape[1]))
                 proj_allDim = np.dot(activity.T, orthonormal_basis)
     
                 if sign:
@@ -1625,6 +1635,7 @@ class Mode(Session):
                     else:
                         decoderchoice += [proj_allDim[time_point]>db]        
         
+        print('time to calculate decoding acc: {}s'.format(time.time() - start))
         return orthonormal_basis, np.mean(activityRL_train, axis=1)[:, None], db, decoderchoice
     
     def plot_performance_distfromCD(self, opto=False):
