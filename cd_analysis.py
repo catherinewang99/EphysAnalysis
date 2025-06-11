@@ -71,10 +71,17 @@ s1.plot_CD_opto(mode_input='stimulus', stim_side = 'L')
 #%% Project for  a single trial
 
 
-#%% CD projection endpoints
+#%% CD projection endpoints 
 path =  r'G:\ephys_data\CW59\python\2025_02_24'
-s1 = Mode(path)
+s1 = Mode(path, side='R')
 proj_allDimR, proj_allDimL = s1.plot_CD(mode_input='choice', auto_corr_return=True, single_trial=True)
+
+train_test_trials = ([s1.r_train_idx, s1.l_train_idx, s1.r_test_idx, s1.l_test_idx],
+                     [s1.r_train_err_idx, s1.l_train_err_idx, s1.r_test_err_idx, s1.l_test_err_idx])
+
+s1 = Mode(path, side='L', train_test_trials=train_test_trials)
+proj_allDimR, proj_allDimL = s1.plot_CD(mode_input='choice', auto_corr_return=True, single_trial=True)
+
 
 r_projR, r_projL = proj_allDimR[170:], proj_allDimL[170:]
 l_projR, l_projL = proj_allDimR[:170], proj_allDimL[:170]

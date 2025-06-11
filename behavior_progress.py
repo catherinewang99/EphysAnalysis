@@ -72,19 +72,19 @@ all_expert_paths = [[
 # b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW48\python_behavior', behavior_only=True)
 # b.learning_progression(window = 50)
 
-# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW49\python_behavior', behavior_only=True)
-# b.learning_progression(window = 50,  color_background=range(15)) # All but the last 6 days
+b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW49\python_behavior', behavior_only=True)
+b.learning_progression(window = 50,  color_background=range(15)) # All but the last 6 days
 
-# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW53\python_behavior', behavior_only=True)
-# b.learning_progression(window = 75, color_background=range(36))
+b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW53\python_behavior', behavior_only=True)
+b.learning_progression(window = 75, color_background=range(36))
 # b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW49t\python_behavior', behavior_only=True)
 # b.learning_progression(window = 75, early_lick_ylim=False)
 
 # b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW53t\python_behavior', behavior_only=True)
 # b.learning_progression(window = 75, early_lick_ylim=False)
 
-# b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW59\python_behavior', behavior_only=True)
-# b.learning_progression(window = 75, color_background=range(22))
+b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW59\python_behavior', behavior_only=True)
+b.learning_progression(window = 75, color_background=range(22))
 
 # b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW59t\python_behavior', behavior_only=True)
 # b.learning_progression(window = 75, early_lick_ylim=False)#, color_background=range(22))
@@ -115,6 +115,23 @@ b.learning_progression(window = 75, color_background=range(59))
 
 # b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW60\python_behavior', behavior_only=True)
 # b.learning_progression(window = 75)#, color_background=range(3))
+
+#%% Plot learning on one graph to compare learning speeds
+mice = ['CW49', 'CW53', 'CW59', 'CW57', 'CW60', 'CW62']
+cutoffs = [15,36,22,33,48,59]
+
+f=plt.figure(figsize=(15,4))
+for i in range(len(mice)):
+    b = behavior.Behavior(r'J:\ephys_data\Behavior data\{}\python_behavior'.format(mice[i]), behavior_only=True)
+    _, perf, sess_trials = b.get_acc_EL(150)
+
+    plt.plot(perf[:sess_trials[cutoffs[i]]], color='red', alpha=0.5)
+    plt.scatter(len(perf[:sess_trials[cutoffs[i]]]), perf[:sess_trials[cutoffs[i]]][-1], s=150, label=mice[i])
+    
+plt.legend()
+plt.xlabel('# trials')
+plt.ylabel('Performance (prop. correct)')    
+plt.title('Opto corruption learning trajectories')
 
 #%% Plot behavior effect to stim
 
@@ -353,8 +370,8 @@ ephys_paths = [
     r'J:\ephys_data\Behavior data\CW59\python_behavior',
     r'J:\ephys_data\Behavior data\CW61\python_behavior',
     r'J:\ephys_data\Behavior data\CW63\python_behavior',
-    # r'J:\ephys_data\Behavior data\CW62\python_behavior',
-    # r'J:\ephys_data\Behavior data\CW60\python_behavior',
+    r'J:\ephys_data\Behavior data\CW62\python_behavior',
+    r'J:\ephys_data\Behavior data\CW60\python_behavior',
 
     
     ]

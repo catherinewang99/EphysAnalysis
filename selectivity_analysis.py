@@ -99,6 +99,7 @@ for path in cat(all_expert_paths):
     p=0.05/len(s1.good_neurons)
     all_neurons = s1.get_epoch_selective(epoch=(s1.sample, s1.response + 2.5), p=p)
     epochs = [(s1.sample, s1.response + 2.5) for _ in range(len(all_neurons))]
+    epochs = [(s1.delay, s1.response) for _ in range(len(all_neurons))]
     sel, _ = s1.plot_selectivity(all_neurons, binsize=200, timestep=50, return_pref_np=False, epoch=epochs)
     
     if len(left_sel) == 0:
@@ -111,6 +112,7 @@ for path in cat(all_expert_paths):
     p=0.05/len(s1.good_neurons)
     all_neurons = s1.get_epoch_selective(epoch=(s1.sample, s1.response + 2.5), p=p)
     epochs = [(s1.sample, s1.response + 2.5) for _ in range(len(all_neurons))]
+    epochs = [(s1.delay, s1.response) for _ in range(len(all_neurons))]
     sel, time = s1.plot_selectivity(all_neurons, binsize=200, timestep=50, return_pref_np=False, epoch=epochs)
     
     if len(right_sel) == 0:
