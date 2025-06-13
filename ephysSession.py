@@ -138,7 +138,12 @@ class Session:
         self.R_correct = cat(behavior['R_hit_tmp'])
         
         self.early_lick = cat(behavior['LickEarly_tmp'])
-        
+
+        # Early lick timing info (if applicable)
+        if 'earlyLick_time' in behavior.keys():
+            self.early_lick_time = cat(behavior['earlyLick_time'])
+            self.early_lick_side = cat(behavior['earlyLick_side'])
+            
         self.L_wrong = cat(behavior['L_miss_tmp'])
         self.R_wrong = cat(behavior['R_miss_tmp'])
         

@@ -19,15 +19,22 @@ sys.path.append("C:\scripts\Imaging analysis")
 import numpy as np
 import scipy.io as scio
 import matplotlib.pyplot as plt
-from alm_2p import session
 from matplotlib.pyplot import figure
 # import decon
 from scipy.stats import chisquare
 import pandas as pd
-from activityMode import Mode
 from scipy import stats
-cat=np.concatenate
 from sklearn.metrics.pairwise import cosine_similarity
+
+import sys
+sys.path.append("C:\scripts\Ephys analysis\ephys_pipeline")
+import numpy as np
+import scipy.io as scio
+import matplotlib.pyplot as plt
+from ephysSession import Session
+import behavior
+cat = np.concatenate
+plt.rcParams['pdf.fonttype'] = '42' 
 
 #%% paths
 
@@ -78,6 +85,15 @@ all_paths = [[
             r'H:\data\BAYLORCW046\python\2024_06_26',
             
             ]]
+
+#%% early lick raster
+
+path = r'J:\ephys_data\CW53\python\2025_01_27'
+s1 = Session(path, passive=False)
+
+
+
+
 
 #%% Work with early lick info
 

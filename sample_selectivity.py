@@ -303,3 +303,18 @@ axarr[0].legend()
 
 
 
+
+
+#%% Make figure s1E for right vs left alm ppyr sample selectivity, per FOV
+
+
+
+
+
+
+
+
+
+
+
+

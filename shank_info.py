@@ -348,7 +348,8 @@ for path in cat(all_expert_paths[1:]):
             right_choice_sel[i] += [np.array(delay_sel) / len(shank_neurons)]
     
 #%%
-right_sample_sel_mean, left_sample_sel_mean, right_choice_sel_mean,left_choice_sel_mean = [],[],[],[]
+right_sample_sel_mean, left_sample_sel_mean, right_choice_sel_mean, left_choice_sel_mean = [],[],[],[]
+right_sample_sel_err, left_sample_sel_err, right_choice_sel_err, left_choice_sel_err = [],[],[],[]
 
 # Proportion selective: 200 ms time bins, p < 0.05
 for i in range(4):
@@ -356,6 +357,13 @@ for i in range(4):
     left_sample_sel_mean += [np.mean(left_sample_sel[i], axis=0)]
     right_choice_sel_mean += [np.mean(right_choice_sel[i], axis=0)]
     left_choice_sel_mean += [np.mean(left_choice_sel[i], axis=0)]
+    
+    right_sample_sel_err += [np.std(right_sample_sel[i], axis=0) / np.sqrt(9)]
+    left_sample_sel_err+= [np.std(left_sample_sel[i], axis=0) / np.sqrt(9)]
+    right_choice_sel_err+= [np.std(right_choice_sel[i], axis=0) / np.sqrt(9)]
+    left_choice_sel_err+= [np.std(left_choice_sel[i], axis=0) / np.sqrt(9)]
+    
+    
 # windows = windows[:-1]
 
 #Plot all
@@ -371,6 +379,15 @@ for i in range(4):
     axarr[1,i].plot(windows, right_sample_sel_mean[i], color='green')
     axarr[1,i].plot(windows, right_choice_sel_mean[i], color='purple')
     
+    axarr[0,i].fill_between(windows, left_sample_sel_mean[i] - left_sample_sel_err[i], 
+                          left_sample_sel_mean[i] + left_sample_sel_err[i], color=['lightgreen'])
+    axarr[0,i].fill_between(windows, left_choice_sel_mean[i] - left_choice_sel_err[i], 
+                          left_choice_sel_mean[i] + left_choice_sel_err[i], color=['pink'])
+
+    axarr[1,i].fill_between(windows, right_sample_sel_mean[i] - right_sample_sel_err[i], 
+                          right_sample_sel_mean[i] + right_sample_sel_err[i], color=['lightgreen'])
+    axarr[1,i].fill_between(windows, right_choice_sel_mean[i] - right_choice_sel_err[i], 
+                          right_choice_sel_mean[i] + right_choice_sel_err[i], color=['pink'])
     
     axarr[1,i].axhline(0.05, color = 'grey', alpha=0.5, ls = '--')
     axarr[1,i].axhline(0.05, color = 'grey', alpha=0.5, ls = '--')
@@ -383,3 +400,4 @@ for i in range(2):
 axarr[1,0].legend()
 axarr[1,0].set_ylabel('Frac. of neurons')
 plt.show()
+
