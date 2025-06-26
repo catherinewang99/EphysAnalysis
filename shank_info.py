@@ -401,3 +401,6 @@ axarr[1,0].legend()
 axarr[1,0].set_ylabel('Frac. of neurons')
 plt.show()
 
+#%% effect of stim across shanks?
+
+

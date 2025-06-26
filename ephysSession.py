@@ -58,7 +58,9 @@ class Session:
     """
     def __init__(self, path, side = 'all', stimside = 'all',
                  passive=False, laser='blue', only_ppyr=True,
-                 filter_low_perf=True, filter_by_stim = True):
+                 filter_low_perf=True, filter_by_stim=True,
+                 anterior_shank=False,
+                 include_early_lick=False):
         
 
         """
@@ -208,6 +210,21 @@ class Session:
             print('only ppyr neurons: {} --> {}'.format(oldn, len(self.good_neurons)))
             self.L_alm_idx = [n for n in self.L_alm_idx if n in self.good_neurons]
             self.R_alm_idx = [n for n in self.R_alm_idx if n in self.good_neurons]
+        
+        if anterior_shank:
+            
+            new_good_neurons = []
+            for n in self.good_neurons:
+                if n in self.L_alm_idx:
+                    if self.shank[n] == 3 or self.shank[n] == 4:
+                        new_good_neurons += [n]
+                elif n in self.R_alm_idx:
+                    if self.shank[n] == 1 or self.shank[n] == 2:
+                        new_good_neurons += [n]
+            
+            print("new anterior neuron count: {} --> {}".format(len(self.good_neurons), len(new_good_neurons)))
+            self.good_neurons = new_good_neurons
+
         
     ### BEHAVIOR ONLY FUNCTIONS ###
     
@@ -445,6 +462,19 @@ class Session:
         idx = [i for i in idx if i in self.i_good_trials]
         
         return idx
+    
+    def instructed_direction(self):
+        """
+        Returns the instructed direction for every trial 
+        """
+        all_trials_direction = np.ones(self.num_trials)
+        
+        idx = np.where((self.L_correct + self.L_wrong) == 1)[0]
+        all_trials_direction = ['l' if i in idx else 'r' for i in range(self.num_trials)]
+        # idx = np.where((self.R_correct + self.R_wrong) == 1)[0]
+        # all_trials_direction[idx] = 'r'
+        
+        return all_trials_direction
         
     ### QUALITY FUNCTIONS ###
 
@@ -835,16 +865,25 @@ class Session:
         """
         all_PSTH = []
         all_std_err = []
-        
+        drop_n = [] # record which neurons are dropped
         for neuron in neurons:
             PSTH, time, stderr = self.get_PSTH(neuron = neuron, trials=trials, 
                                                binsize=binsize, timestep=timestep,
                                                period=window)
+            # if len(PSTH) == 0:
+                # drop_n += [neuron]
+                
+                # continue
             
             all_PSTH += [PSTH]
             all_std_err += [stderr]
 
-        return np.array(all_PSTH), time, np.array(all_std_err)         
+        # return 
+        if len(drop_n) == 0:
+            return np.array(all_PSTH), time, np.array(all_std_err)       
+        else:
+            return np.array(all_PSTH), time, np.array(all_std_err), drop_n      
+
             
     
     ### SIMPLE PLOTTING FUNCTIONS ###
@@ -1537,9 +1576,13 @@ class Session:
                 l_control_trials = [i for i in l_control_trials if i not in all_exclude_trials]
                 r_control_trials = [i for i in r_control_trials if i not in all_exclude_trials]
     
-                l_control_trials = [i for i in l_control_trials if i in self.stable_trials[n] and not self.stim_ON[i]]
-                r_control_trials = [i for i in r_control_trials if i in self.stable_trials[n] and not self.stim_ON[i]]    
-                
+                if opto:
+                    l_control_trials = [i for i in l_control_trials if i in self.stable_trials[n] and self.stim_ON[i]]
+                    r_control_trials = [i for i in r_control_trials if i in self.stable_trials[n] and self.stim_ON[i]]    
+                else:
+                    l_control_trials = [i for i in l_control_trials if i in self.stable_trials[n] and not self.stim_ON[i]]
+                    r_control_trials = [i for i in r_control_trials if i in self.stable_trials[n] and not self.stim_ON[i]] 
+                    
                 if L_pref:
                     pref, time,_ = self.get_PSTH(n, l_control_trials, binsize=binsize, timestep=timestep)
                     nonpref,_,_ = self.get_PSTH(n, r_control_trials, binsize=binsize, timestep=timestep)

@@ -310,6 +310,84 @@ axarr[0].legend()
 
 
 
+#%% Is sample selectivity stronger or effect of stim?
+path = r'J:\ephys_data\CW53\python\2025_01_31'
+# path = r'G:\ephys_data\CW59\python\2025_02_27'
+
+
+# Out of sample selective cells in control condition, look at their selectivity in control vs stim trials
+s1 = Session(path, passive=False, filter_low_perf=True, filter_by_stim=False, laser='red', side='L')
+
+# out of cells affected by stim, how many are sample selective vs control propotion
+
+stim_trials = np.where(s1.stim_level == 2.7)[0]
+control_trials = np.where(s1.stim_level == 0)[0]
+window = (0.57, 0.57+2.3) 
+sample_sel = s1.get_epoch_selective((s1.sample, s1.delay), p=0.05)
+all_supr_n, all_exc_n = [],[]
+for n in s1.good_neurons:
+    
+    val = s1.stim_effect_per_neuron(n, stim_trials, window=window, p=0.05/len(s1.good_neurons))
+    if val == -1:
+        all_supr_n += [n]
+    elif val == 1:
+        all_exc_n += [n]
+supr_sample_n = np.intersect1d(all_supr_n, sample_sel)
+exc_sample_n = np.intersect1d(all_exc_n, sample_sel)
+
+f=plt.figure()
+plt.bar(np.arange(2)-0.2, [len(supr_sample_n) / len(all_supr_n), 1-(len(supr_sample_n) / len(all_supr_n))], 0.4, color = 'red', label='Supr')
+# plt.bar(np.arange(2)+0.2, [len(exc_sample_n) / len(all_exc_n), 1-(len(exc_sample_n) / len(all_exc_n))], 0.4, color = 'red', label='Exc')
+plt.bar(np.arange(2)+0.2, [len(sample_sel) / len(s1.good_neurons), 1-(len(sample_sel) / len(s1.good_neurons))], 0.4, color='grey', label='Ctl')
+plt.xticks([0,1],['Sample selective', 'Other'])
+plt.ylabel('Proportion of neurons')
+plt.title('Sample selective neurons affected by stim')
+plt.show()
+
+
+f=plt.figure()
+plt.bar(np.arange(2), [len(supr_sample_n) / len(all_supr_n), len(exc_sample_n) / len(all_exc_n)])
+plt.xticks([0,1],['Supr.', 'Exc.'])
+plt.ylabel('Proportion of neurons')
+plt.title('Proportion of neurons that are sample selective')
+# plt.ylim(0,0.15)
+plt.xlabel('Effect of stim')
+
+
+
+# Plot as a time course? separate out per neuron
+
+epochs = [(s1.sample, s1.delay) for _ in range(len(supr_sample_n))]
+supr_sel, time = s1.plot_selectivity(supr_sample_n, epoch=epochs,binsize=200, timestep=50, return_pref_np=False)
+suprsel = np.mean(supr_sel, axis=0)
+suprsel_error = np.std(supr_sel, axis=0) / np.sqrt(len(supr_sel))
+
+supr_selopto, _ = s1.plot_selectivity(supr_sample_n, epoch=epochs,binsize=200, timestep=50, return_pref_np=False, opto=True)
+suprselopto = np.mean(supr_selopto, axis=0)
+suprsel_erroropto = np.std(supr_selopto, axis=0) / np.sqrt(len(supr_selopto))
+
+# epochs = [(s1.sample, s1.delay) for _ in range(len(exc_sample_n))]
+# exc_sel, time = s1.plot_selectivity(exc_sample_n, epoch=epochs,binsize=200, timestep=50, return_pref_np=False)
+# excsel = np.mean(exc_sel, axis=0)
+# excsel_error = np.std(exc_sel, axis=0) / np.sqrt(len(exc_sel))
+
+
+f=plt.figure(figsize=(10,5))
+plt.plot(time, suprsel_erroropto, label='opto', color='blue')
+plt.plot(time, suprsel, label='Inhibited', color='orange')
+plt.fill_between(time, excsel - excsel_error, 
+          excsel + excsel_error,
+          color=['lightgray'])
+plt.fill_between(time, suprsel_erroropto - suprsel_erroropto, 
+          suprsel_erroropto + suprsel_erroropto,
+          color=['lightgray'])
+plt.ylabel('Selectivity (spks/s)')
+plt.xlabel('Time')
+plt.axhline(0, ls='--', color='grey')
+plt.axvline(s1.sample, ls='--', color='grey')
+plt.axvline(s1.delay, ls='--', color='grey')
+plt.axvline(s1.response, ls='--', color='grey')
+plt.legend()
 
 
 

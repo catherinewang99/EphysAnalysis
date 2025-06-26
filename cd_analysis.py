@@ -23,6 +23,7 @@ import random
 from scipy import stats
 from statsmodels.stats.proportion import proportions_ztest
 
+cat = np.concatenate
 
 def unit_vector(vector):
     """ Returns the unit vector of the vector.  """
@@ -62,7 +63,7 @@ paths = [
         ]
 path =  r'G:\ephys_data\CW59\python\2025_02_25'
 
-s1 = Mode(path, side='R', proportion_train=0.75)#, timestep=1)#, passive=False)
+s1 = Mode(path, side='R', proportion_train=0.6)#, timestep=1)#, passive=False)
 s1.plot_CD(mode_input='choice')
 _, _, db, choice = s1.decision_boundary(error=False)
 np.mean(choice)
@@ -70,6 +71,7 @@ np.mean(choice)
 # s1.plot_CD_opto(mode_input='stimulus', stim_side = 'L')
 
 #%% Project for  a single trial
+
 
 
 #%% CD projection endpoints 
@@ -165,6 +167,7 @@ plt.ylabel('Rank correlation of CD proj.')
 
 #%% Decoding accuracies
 l_acc, r_acc = [],[]
+lowp_sess_left, lowp_sess_right = [],[]
 for path in cat(all_expert_paths):
     s1 = Mode(path, side='L', proportion_train=0.65)#, timestep=1)#, passive=False)
 
@@ -173,6 +176,11 @@ for path in cat(all_expert_paths):
         _, _, db, choice = s1.decision_boundary(error=False)
     
         l_acc += [np.mean(choice)]
+        
+        if np.mean(choice) < 0.5:
+            
+            s1.plot_CD()
+            lowp_sess_left += [(db, path)]
 
     s1 = Mode(path, side='R', proportion_train=0.65)# timestep=1)#, passive=False)
     
@@ -181,7 +189,11 @@ for path in cat(all_expert_paths):
         _, _, db, choice = s1.decision_boundary(error=False)
     
         r_acc += [np.mean(choice)]
-
+        if np.mean(choice) < 0.5:
+            
+            s1.plot_CD()
+            lowp_sess_right += [(db, path)]
+            
 # l_acc= [l if l > 0.5 else 1-l for l in l_acc ]
 # r_acc= [l if l > 0.5 else 1-l for l in r_acc ]
 

@@ -270,7 +270,7 @@ plt.show()
 #%% Single FOV view
 # path = r'H:\ephys_data\CW47\python\2024_10_25'
 path =     r'J:\ephys_data\CW53\python\2025_01_29'
-path = r'G:\ephys_data\CW59\python\2025_02_25'
+path = r'G:\ephys_data\CW62\python\2025_06_24'
                
                     # [r'G:\ephys_data\CW59\python\2025_02_22',
                     #  r'G:\ephys_data\CW59\python\2025_02_24',
@@ -300,9 +300,9 @@ path = r'G:\ephys_data\CW59\python\2025_02_25'
 # s1 = Session(path, passive=False, filter_low_perf=True, filter_by_stim=False, laser='red') # red laser session
 s1 = Session(path, passive=False, filter_low_perf=True, filter_by_stim=True) # blue laser session
 s1.filter_low_performance(threshold=0.6, consec_len=20)
-epoch = (s1.delay, s1.response)
+epoch = (s1.sample, s1.delay)
 left_info, right_info = s1.selectivity_optogenetics(epoch = epoch,
-                                                    p=0.05, 
+                                                    p=0.2, 
                                                     binsize=200, 
                                                     timestep=100,
                                                     bootstrap=False)
@@ -384,7 +384,7 @@ for paths in allpaths:
     all_control_sel_R, all_opto_sel_stim_left_R, all_opto_sel_stim_right_R = [],[],[]
     
     for path in paths:
-        s1 = Session(path, passive=False)
+        s1 = Session(path, passive=False, anterior_shank=True)
 
         left_info, right_info = s1.selectivity_optogenetics(epoch = (s1.delay, s1.response),
                                                             # p=0.05/len(s1.good_neurons), 

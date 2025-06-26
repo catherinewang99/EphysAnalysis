@@ -51,6 +51,9 @@ class Behavior():
         self.delay_duration = dict()
         self.protocol = dict()
         
+        self.early_lick_time = dict()
+        self.early_lick_side = dict()
+        
         if not single:
         
             for i in os.listdir(path):
@@ -77,7 +80,10 @@ class Behavior():
                             
                             self.L_ignore[total_sessions] = cat(behavior['L_ignore_tmp'])
                             self.R_ignore[total_sessions] = cat(behavior['R_ignore_tmp'])
-                           
+                            if 'earlyLick_time' in behavior.keys():
+                                self.early_lick_time[total_sessions] = cat(behavior['earlyLick_time'])
+                                self.early_lick_side[total_sessions] = cat(behavior['earlyLick_side'])
+                                
                             if behavior_only:
                                 
                                 self.delay_duration[total_sessions] = cat(behavior['delay_duration'])

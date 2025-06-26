@@ -2,8 +2,8 @@ addpath('H:\data')
 addpath('./func/')
 
 path = 'H:\ephys_data\CW47\';
-% path = 'G:\ephys_data\CW61\';
-path = 'J:\ephys_data\CW53\';
+path = 'G:\ephys_data\CW62\';
+% path = 'J:\ephys_data\CW49\';
 
 mkdir([path 'python'])
 
@@ -50,7 +50,7 @@ for j = 1:length(lst)
         obj.Pole_Time();
         obj.Cue_Time();
         obj.Lick_SideTime();
-        
+
         R_hit_tmp = ((char(obj.sides)=='r') & obj.trials.hitHistory);
         R_miss_tmp = ((char(obj.sides)=='r') & obj.trials.missHistory);
         R_ignore_tmp = ((char(obj.sides)=='r') & obj.trials.noResponseHistory);

@@ -2,7 +2,8 @@ addpath('H:\data')
 addpath('./func/')
 
 path = 'H:\ephys_data\CW47\';
-% path = 'J:\ephys_data\CW478\';
+path = 'G:\ephys_data\CW59\';
+path = 'J:\ephys_data\CW49\';
 
 mkdir([path 'python'])
 
@@ -22,6 +23,7 @@ for j = 1:length(lst)
         celltype = zeros(1, numunits);
         spikewidth = zeros(1, numunits);
         mean_waveform = cell(1, numunits);
+        shank = zeros(1, numunits);
         for i = 1:numunits
             trials = cell(1, size(obj.stimProb, 1)); % same number of trials for each unit
 
@@ -33,12 +35,13 @@ for j = 1:length(lst)
 
             units{i} = trials; % Add all trial sorted spikes to unit
             imec(i) = str2double(obj.units{1, i}.imec); % include L/R ALM info
+            shank(i) = obj.units{1, i}.shank_info; % include shank number
             [celltype(i), spikewidth(i)] = func_get_cell_type_kilosort(obj.units{1, i}.mean_waveform); % cell type info
             mean_waveform{i} = obj.units{1, i}.mean_waveform; % mean waveform
             stabletrials{i} = obj.units{1, i}.stable_trials; % add stable trials
         end 
         nametmp = namesplit(5);
-        save([path, 'python\' strjoin(namesplit(2:4), '_') '\units.mat'], 'units', 'imec', 'stabletrials', 'mean_waveform', 'celltype')
+        save([path, 'python\' strjoin(namesplit(2:4), '_') '\units.mat'], 'units', 'imec', 'stabletrials', 'mean_waveform', 'celltype', 'shank')
 
 
         % Get behavioral data
@@ -46,7 +49,8 @@ for j = 1:length(lst)
         obj.Alarm_Nums();
         obj.Pole_Time();
         obj.Cue_Time();
-        
+        obj.Lick_SideTime();
+
         R_hit_tmp = ((char(obj.sides)=='r') & obj.trials.hitHistory);
         R_miss_tmp = ((char(obj.sides)=='r') & obj.trials.missHistory);
         R_ignore_tmp = ((char(obj.sides)=='r') & obj.trials.noResponseHistory);
@@ -57,6 +61,14 @@ for j = 1:length(lst)
         
         LickEarly_tmp = zeros(length(obj.eventsHistory),1);
         LickEarly_tmp(obj.trials.alarmNums,1) = 1;
+
+        % Get early lick times and side
+        earlyLick_time = cell(1,length(obj.trials.alarmNums));
+        earlyLick_side = cell(1,length(obj.trials.alarmNums));
+        for t = 1:length(obj.trials.alarmNums) % all the early lick trials
+            earlyLick_time{t} = obj.licking.time{obj.trials.alarmNums(t),1}(:, 1);
+            earlyLick_side{t} = char(obj.licking.time{obj.trials.alarmNums(t),1}(:, 2));
+        end
 
         % Get i good trials
 %         StimDur_tmp = 0;
@@ -124,7 +136,10 @@ for j = 1:length(lst)
             % Galvo x info
 
             if max(wave_xGalvo_tmp) < 0.1
-                xGalvoHistory
+                xGalvo(i_solo_trial,:) = min(wave_xGalvo_tmp);
+            else
+                xGalvo(i_solo_trial,:) = max(wave_xGalvo_tmp);
+            end
 
             % Lick information
                         
@@ -134,9 +149,12 @@ for j = 1:length(lst)
 
 
         
-        save([path 'python\' strjoin(namesplit(2:4), '_') '\behavior.mat'], 'R_hit_tmp', 'R_miss_tmp', 'R_ignore_tmp', 'L_hit_tmp', 'L_miss_tmp', 'L_ignore_tmp', 'LickEarly_tmp', 'i_good_trials', 'StimDur_tmp', 'StimLevel')
+        save([path 'python\' strjoin(namesplit(2:4), '_') '\behavior.mat'], ...
+            'R_hit_tmp', 'R_miss_tmp', 'R_ignore_tmp', 'L_hit_tmp', 'L_miss_tmp', ...
+            'L_ignore_tmp', 'LickEarly_tmp', 'i_good_trials', 'StimDur_tmp', 'StimLevel', 'xGalvo', ...
+            'earlyLick_time', 'earlyLick_side')
         
-        clearvars AOM_data_tmp StimDur_tmp StimOnTime_tmp StimLevel
+        clearvars AOM_data_tmp StimDur_tmp StimOnTime_tmp StimLevel xGalvo
 
     end
 end

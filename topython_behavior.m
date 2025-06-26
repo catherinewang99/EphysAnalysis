@@ -1,6 +1,6 @@
 addpath('F:\data')
 % path = 'F:\data\Behavior data\BAYLORCW037';
-path = 'J:\ephys_data\Behavior data\CW62';
+path = 'J:\ephys_data\Behavior data\CW53';
 
 mkdir([path '\python_behavior'])
 
@@ -16,7 +16,8 @@ for j = 1:length(lst)
         obj.Alarm_Nums();
         obj.Pole_Time();
         obj.Cue_Time();
-        
+        obj.Lick_SideTime();
+
         R_hit_tmp = ((char(obj.sides)=='r') & obj.trials.hitHistory);
         R_miss_tmp = ((char(obj.sides)=='r') & obj.trials.missHistory);
         R_ignore_tmp = ((char(obj.sides)=='r') & obj.trials.noResponseHistory);
@@ -26,6 +27,13 @@ for j = 1:length(lst)
         
         
         LickEarly_tmp = zeros(length(obj.eventsHistory),1);
+        % Get early lick times and side
+        earlyLick_time = cell(1,length(obj.trials.alarmNums));
+        earlyLick_side = cell(1,length(obj.trials.alarmNums));
+        for t = 1:length(obj.trials.alarmNums) % all the early lick trials
+            earlyLick_time{t} = obj.licking.time{obj.trials.alarmNums(t),1}(:, 1);
+            earlyLick_side{t} = char(obj.licking.time{obj.trials.alarmNums(t),1}(:, 2));
+        end
 
         % Get i good trials
 
@@ -107,7 +115,10 @@ for j = 1:length(lst)
 
         delay_duration = obj.settings;
         
-        save([path '\python_behavior\' namesplit{2} '\behavior.mat'], 'R_hit_tmp', 'R_miss_tmp', 'R_ignore_tmp', 'L_hit_tmp', 'L_miss_tmp', 'L_ignore_tmp', 'LickEarly_tmp', 'i_good_trials', 'protocol', 'delay_duration')
+        save([path '\python_behavior\' namesplit{2} '\behavior.mat'], 'R_hit_tmp', 'R_miss_tmp', ...
+            'R_ignore_tmp', 'L_hit_tmp', 'L_miss_tmp', 'L_ignore_tmp', ...
+            'LickEarly_tmp', 'i_good_trials', 'protocol', ...
+            'delay_duration', 'earlyLick_time', 'earlyLick_side')
         
         clearvars delay_duration
     end

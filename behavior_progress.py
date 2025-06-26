@@ -133,6 +133,48 @@ plt.xlabel('# trials')
 plt.ylabel('Performance (prop. correct)')    
 plt.title('Opto corruption learning trajectories')
 
+#%% Look at early lick behavior in corruption days
+b = behavior.Behavior(r'J:\ephys_data\Behavior data\CW53\python_behavior', behavior_only=True)
+binsize = 100 # ms
+buckets = np.arange(0, s1.response+binsize/1000, binsize/1000)
+f = plt.figure(figsize=(8,6))
+
+for t in b.early_lick_time.values():
+    all_times = cat(t)
+
+    counts, bin_edges = np.histogram(all_times, bins=buckets)
+    plt.plot(bin_edges[:-1], counts, alpha=0.5)
+plt.axvline(s1.sample, ls = '--', color = 'black')
+plt.axvline(s1.delay, ls = '--', color = 'black')
+plt.axvline(s1.response, ls = '--', color = 'black')
+plt.hlines(y=305, xmin=s1.sample, xmax=s1.sample+2.3 , linewidth=10, color='red')
+plt.axvspan(s1.sample, s1.delay+1, color='red', alpha=0.1)
+plt.ylabel('Early lick count')
+plt.xlabel('Time (s)')
+plt.legend()
+
+# look at the side of early lick
+f = plt.figure(figsize=(8,6))
+
+for t in b.early_lick_time.keys():
+    all_times = cat(b.early_lick_time[t])
+    all_sides = cat(b.early_lick_side[t])
+
+    counts, bin_edges = np.histogram(all_times[np.where(all_sides =='r')[0]], bins=buckets)
+    plt.plot(bin_edges[:-1], counts, alpha=0.5, color='blue')
+    counts, bin_edges = np.histogram(all_times[np.where(all_sides =='l')[0]], bins=buckets)
+    plt.plot(bin_edges[:-1], counts, alpha=0.5, color='red')
+
+plt.axvline(s1.sample, ls = '--', color = 'black')
+plt.axvline(s1.delay, ls = '--', color = 'black')
+plt.axvline(s1.response, ls = '--', color = 'black')
+plt.ylabel('Early lick count')
+plt.xlabel('Time (s)')
+plt.hlines(y=95, xmin=s1.sample, xmax=s1.sample+2.3 , linewidth=10, color='red')
+plt.axvspan(s1.sample, s1.delay+1, color='red', alpha=0.1)
+plt.legend()
+
+
 #%% Plot behavior effect to stim
 
 paths = [

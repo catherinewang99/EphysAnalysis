@@ -17,7 +17,7 @@ from sklearn.preprocessing import normalize
 from ephysSession import Session
 import sympy
 from random import shuffle
-import time
+import time as time_func
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 plt.rcParams['pdf.fonttype'] = 42 
 
@@ -184,8 +184,10 @@ class Mode(Session):
         self.r_opto_stim_left_idx = r_trials_stimleft
         self.l_opto_stim_left_idx = l_trials_stimleft   
         
+        
+        
         ## ASSIGN NEURAL ACTIVITY PER train_idx / test_idx
-        start = time.time()
+        start = time_func.time()
         counter = 0
         for n in self.good_neurons:
                         
@@ -226,7 +228,7 @@ class Mode(Session):
                 # self.PSTH_l_test_opto = np.concatenate((self.PSTH_l_test_opto, np.reshape(l_opto_test, (1,-1))), axis = 0)
                 
             counter += 1
-        print("time taken: " +str(time.time() - start))
+        print("time taken: " +str(time_func.time() - start))
         self.T_cue_aligned_sel = self.t
             
         time_epochs = [self.sample, self.delay, self.response]
@@ -452,7 +454,7 @@ class Mode(Session):
         return r_train, l_train, r_test, l_test
     
     def func_compute_activity_modes_DRT(self, input_, ctl=True, lickdir=False, use_LDA=False,
-                                        orthog=False):
+                                        orthog=False, norm=False):
     
         # Inputs: Left Right Correct Error traces of ALL neurons that are selective
         #           time stamps for analysis?
@@ -498,7 +500,7 @@ class Mode(Session):
             CD_stim_mode = np.mean(wt[:, i_t], axis=1)
         
             wt = (PSTH_yes_correct - PSTH_no_correct)/2
-            i_t = np.where((T_cue_aligned_sel > t_delay) & (T_cue_aligned_sel < t_response))[0]
+            i_t = np.where((T_cue_aligned_sel > (t_delay)) & (T_cue_aligned_sel < t_response))[0]
             CD_choice_mode = np.mean(wt[:, i_t], axis=1)
             
             wt = (PSTH_yes_correct + PSTH_no_correct)/2
@@ -532,7 +534,7 @@ class Mode(Session):
             CD_stim_mode = np.mean(wt[:, i_t], axis=1)
             
             wt = (PSTH_yes_correct + PSTH_no_error) / 2 - (PSTH_no_correct + PSTH_yes_error) / 2
-            i_t = np.where((T_cue_aligned_sel > t_delay) & (T_cue_aligned_sel < t_response))[0]
+            i_t = np.where((T_cue_aligned_sel > (t_delay)) & (T_cue_aligned_sel < t_response))[0]
             CD_choice_mode = np.mean(wt[:, i_t], axis=1)
             
             wt = (PSTH_yes_correct + PSTH_no_correct) / 2 - (PSTH_yes_error + PSTH_no_error) / 2
@@ -606,7 +608,7 @@ class Mode(Session):
             CD_stim_mode = np.mean(wt[:, i_t], axis=1)
         
             wt = (PSTH_yes_correct + PSTH_no_error) / 2 - (PSTH_no_correct + PSTH_yes_error) / 2
-            i_t = np.where((T_cue_aligned_sel > t_delay) & (T_cue_aligned_sel < t_response))[0]
+            i_t = np.where((T_cue_aligned_sel > (t_delay)) & (T_cue_aligned_sel < t_response))[0]
             CD_choice_mode = np.mean(wt[:, i_t], axis=1)
             
             wt = (PSTH_yes_correct + PSTH_no_correct) / 2 - (PSTH_yes_error + PSTH_no_error) / 2
@@ -633,16 +635,16 @@ class Mode(Session):
             i_t2 = np.where((T_cue_aligned_sel > t_response) & (T_cue_aligned_sel < (t_response+0.1)))[0]
             GoDirection_mode = np.mean(wt[:, i_t2], axis=1) - np.mean(wt[:, i_t1], axis=1)
 
-        
-        CD_stim_mode = CD_stim_mode / np.linalg.norm(CD_stim_mode)
-        CD_choice_mode = CD_choice_mode / np.linalg.norm(CD_choice_mode)
-        CD_outcome_mode = CD_outcome_mode / np.linalg.norm(CD_outcome_mode)
-        CD_sample_mode = CD_sample_mode / np.linalg.norm(CD_sample_mode)
-        CD_delay_mode = CD_delay_mode / np.linalg.norm(CD_delay_mode)
-        CD_go_mode = CD_go_mode / np.linalg.norm(CD_go_mode)
-        Ramping_mode = Ramping_mode / np.linalg.norm(Ramping_mode)
-        GoDirection_mode = GoDirection_mode / np.linalg.norm(GoDirection_mode)
-        
+        if norm:
+            CD_stim_mode = CD_stim_mode / np.linalg.norm(CD_stim_mode)
+            CD_choice_mode = CD_choice_mode / np.linalg.norm(CD_choice_mode)
+            CD_outcome_mode = CD_outcome_mode / np.linalg.norm(CD_outcome_mode)
+            CD_sample_mode = CD_sample_mode / np.linalg.norm(CD_sample_mode)
+            CD_delay_mode = CD_delay_mode / np.linalg.norm(CD_delay_mode)
+            CD_go_mode = CD_go_mode / np.linalg.norm(CD_go_mode)
+            Ramping_mode = Ramping_mode / np.linalg.norm(Ramping_mode)
+            GoDirection_mode = GoDirection_mode / np.linalg.norm(GoDirection_mode)
+            
         # Reshape all activity modes
         
         CD_stim_mode = np.reshape(CD_stim_mode, (-1, 1)) 
@@ -664,7 +666,7 @@ class Mode(Session):
             var_s = np.square(np.diag(s[0:proj_allDim.shape[1]]))
             var_allDim = var_s / np.sum(var_s)
             
-            start_time = time.time()
+            start_time = time_func.time()
             input_ = np.concatenate((CD_stim_mode, CD_choice_mode, CD_outcome_mode, CD_sample_mode, CD_delay_mode, CD_go_mode, Ramping_mode, GoDirection_mode, v), axis=1)
             # orthonormal_basis = self.Gram_Schmidt_process(input_)
             orthonormal_basis, _ = np.linalg.qr(input_, mode='complete')  # lmao
@@ -675,7 +677,7 @@ class Mode(Session):
             
             var_allDim = var_allDim / np.sum(var_allDim)
             
-            print("Runtime: {} secs".format(time.time() - start_time))
+            print("Runtime: {} secs".format(time_func.time() - start_time))
             return orthonormal_basis, var_allDim
         
         else:
@@ -762,7 +764,7 @@ class Mode(Session):
         
         CD_choice_mode = np.reshape(CD_choice_mode, (-1, 1)) 
 
-        start_time = time.time()
+        start_time = time_func.time()
         input_ = np.concatenate((CD_choice_mode, v), axis=1)
         # orthonormal_basis = self.Gram_Schmidt_process(input_)
         orthonormal_basis, _ = np.linalg.qr(input_, mode='complete')  # lmao
@@ -773,7 +775,7 @@ class Mode(Session):
         
         var_allDim = var_allDim / np.sum(var_allDim)
         
-        print("Runtime: {} secs".format(time.time() - start_time))
+        print("Runtime: {} secs".format(time_func.time() - start_time))
         return orthonormal_basis, var_allDim
     
     def func_compute_persistent_decoder(self, input_, epoch):
@@ -817,7 +819,7 @@ class Mode(Session):
         
         CD_choice_mode = np.reshape(CD_choice_mode, (-1, 1)) 
 
-        start_time = time.time()
+        start_time = time_func.time()
         input_ = np.concatenate((CD_choice_mode, v), axis=1)
         # orthonormal_basis = self.Gram_Schmidt_process(input_)
         orthonormal_basis, _ = np.linalg.qr(input_, mode='complete')  # lmao
@@ -828,7 +830,7 @@ class Mode(Session):
         
         var_allDim = var_allDim / np.sum(var_allDim)
         
-        print("Runtime: {} secs".format(time.time() - start_time))
+        print("Runtime: {} secs".format(time_func.time() - start_time))
         return orthonormal_basis, var_allDim
     
     
@@ -920,23 +922,25 @@ class Mode(Session):
     def plot_CD(self, mode_input='choice', epoch=None, ctl=False, lickdir=False, 
                 save=None, plot=True, remove_top = False, auto_corr_return=False,
                 fix_axis=None, remove_n = [], single_trial = False,
-                return_traces = False, orthog=False):
+                return_traces = False, orthog=False, norm=True):
         "This method orthogonalizes the various modes"
 
-        start = time.time()
+        start = time_func.time()
         
         if ctl:
             orthonormal_basis, var_allDim = self.func_compute_activity_modes_DRT([self.PSTH_r_train_correct, 
                                                                                 self.PSTH_l_train_correct], ctl=ctl, 
-                                                                                lickdir=lickdir, orthog=orthog)
+                                                                                lickdir=lickdir, orthog=orthog,
+                                                                                norm=norm)
         else:
             orthonormal_basis, var_allDim = self.func_compute_activity_modes_DRT([self.PSTH_r_train_correct, 
                                                                                 self.PSTH_l_train_correct, 
                                                                                 self.PSTH_r_train_error, 
                                                                                 self.PSTH_l_train_error], ctl=ctl, 
-                                                                                lickdir=lickdir, orthog=orthog)           
+                                                                                lickdir=lickdir, orthog=orthog,
+                                                                                norm=norm)           
         
-        print("calculation time: {}".format(time.time() - start))
+        print("calculation time: {}".format(time_func.time() - start))
         
         activityRL_train= np.concatenate((self.PSTH_r_train_correct, 
                                         self.PSTH_l_train_correct, 
@@ -1464,7 +1468,7 @@ class Mode(Session):
         
     def decision_boundary(self, mode_input='choice', opto=False, error=True, 
                           persistence=False, ctl=True, remove_n = [],
-                          orthog=False):
+                          orthog=False, norm=True):
         """
         Calculate decision boundary across trials of CD
         
@@ -1480,7 +1484,7 @@ class Mode(Session):
         remove_n : list, optional
             If not empty, remove these neurons from the calculation of decoding acc
         """
-        start = time.time()
+        start = time_func.time()
         
         idx_map = {'choice': 1, 'action':5, 'stimulus':0}
         idx = idx_map[mode_input]
@@ -1491,7 +1495,8 @@ class Mode(Session):
             # FIXME right now only implemented for choice mode
             orthonormal_basis, _ = self.func_compute_activity_modes_DRT([self.PSTH_r_train_correct, 
                                                                          self.PSTH_l_train_correct], 
-                                                                        ctl=ctl, orthog=orthog) # one method
+                                                                        ctl=ctl, orthog=orthog,
+                                                                        norm=norm) # one method
 
             
             
@@ -1543,8 +1548,8 @@ class Mode(Session):
                               'stimulus':(self.response-0.4, self.response)}
             
         time_point = time_point_map[mode_input]
-        # time_point = np.where((x > time_point[0]) & (x < time_point[1]))[0]
-        time_point = np.where(self.t < time_point[1])[-1]
+        time_point = np.where((x > time_point[0]) & (x < time_point[1]))[0]
+        # time_point = np.where(self.t < time_point[1])[0][-1]
         
         projright, projleft = [], []
         # Project for every trial in train set for DB
@@ -1565,7 +1570,10 @@ class Mode(Session):
 
 
         db = ((np.mean(projright) / np.var(projright)) + (np.mean(projleft) / np.var(projleft))) / (((1/ np.var(projright))) + (1/ np.var(projleft)))
+        db = ((np.mean(projright)) + (np.mean(projleft))) / 2
         sign = np.mean(projright) > db
+        
+        # return db, projright, projleft
 
         decoderchoice = []
         if opto:
@@ -1658,7 +1666,7 @@ class Mode(Session):
                     else:
                         decoderchoice += [proj_allDim[time_point]>db]        
         
-        print('time to calculate decoding acc: {}s'.format(time.time() - start))
+        print('time to calculate decoding acc: {}s'.format(time_func.time() - start))
         return orthonormal_basis, np.mean(activityRL_train, axis=1)[:, None], db, decoderchoice
     
     def plot_performance_distfromCD(self, opto=False):
@@ -2708,7 +2716,7 @@ class Mode(Session):
             
             CD_recovery_mode = np.reshape(CD_recovery_mode, (-1, 1)) 
     
-            start_time = time.time()
+            start_time = time_func.time()
             input_ = np.concatenate((CD_recovery_mode, v), axis=1)
             # orthonormal_basis = self.Gram_Schmidt_process(input_)
             orthonormal_basis, _ = np.linalg.qr(input_, mode='complete')  # lmao

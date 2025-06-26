@@ -361,10 +361,10 @@ for i in range(4):
 #%% Selectivity recovery for red laser behavior sessions
 
 path = r'J:\ephys_data\CW53\python\2025_01_31'
-path = r'G:\ephys_data\CW59\python\2025_02_27'
+# path = r'G:\ephys_data\CW59\python\2025_02_27'
 
 s1 = Session(path, passive=False, filter_low_perf=True, filter_by_stim=False, laser='red')
-left_info, right_info = s1.selectivity_optogenetics(epoch = (s1.delay , s1.response),
+left_info, right_info = s1.selectivity_optogenetics(epoch = (s1.sample , s1.delay),
                                                     p=0.05                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         , 
                                                     binsize=150, 
                                                     timestep=50,

@@ -31,71 +31,268 @@ sys.path.append("C:\scripts\Ephys analysis\ephys_pipeline")
 import numpy as np
 import scipy.io as scio
 import matplotlib.pyplot as plt
+from activitymode import Mode
+
 from ephysSession import Session
 import behavior
 cat = np.concatenate
 plt.rcParams['pdf.fonttype'] = '42' 
 
+def unit_vector(vector):
+    """ Returns the unit vector of the vector.  """
+    return vector / np.linalg.norm(vector)
+
+def angle_between(v1, v2):
+    """ Returns the angle in radians between vectors 'v1' and 'v2'::
+
+            >>> angle_between((1, 0, 0), (0, 1, 0))
+            1.5707963267948966
+            >>> angle_between((1, 0, 0), (1, 0, 0))
+            0.0
+            >>> angle_between((1, 0, 0), (-1, 0, 0))
+            3.141592653589793
+    """
+    v1_u = unit_vector(v1)
+    v2_u = unit_vector(v2)
+    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+
+def cos_sim(a,b):
+    return np.dot(a, b)/(np.linalg.norm(a)*np.linalg.norm(b))
 #%% paths
 
-all_paths = [[    
-            # r'F:\data\BAYLORCW032\python\2023_10_05',
-            # r'F:\data\BAYLORCW034\python\2023_10_12',
-            # r'F:\data\BAYLORCW036\python\2023_10_09',
-            # r'F:\data\BAYLORCW035\python\2023_10_26',
-            # r'F:\data\BAYLORCW037\python\2023_11_21',
-            
-            r'H:\data\BAYLORCW044\python\2024_05_22',
-            r'H:\data\BAYLORCW044\python\2024_05_23',
-            
-            r'H:\data\BAYLORCW046\python\2024_05_29',
-            r'H:\data\BAYLORCW046\python\2024_05_30',
-            r'H:\data\BAYLORCW046\python\2024_05_31',
-            ],
 
-              [
-             # r'F:\data\BAYLORCW032\python\2023_10_19',
-            # r'F:\data\BAYLORCW034\python\2023_10_22',
-            # r'F:\data\BAYLORCW036\python\2023_10_19',
-            # r'F:\data\BAYLORCW035\python\2023_12_07',
-            # r'F:\data\BAYLORCW037\python\2023_12_08',
-            
-            r'H:\data\BAYLORCW044\python\2024_06_06',
-            r'H:\data\BAYLORCW044\python\2024_06_04',
-
-            # r'H:\data\BAYLORCW046\python\2024_06_07', #sub out for below
-            r'H:\data\BAYLORCW046\python\2024_06_24',
-            r'H:\data\BAYLORCW046\python\2024_06_10',
-            r'H:\data\BAYLORCW046\python\2024_06_11',
-            ],
+all_expert_paths = [[
+                        # r'J:\ephys_data\CW49\python\2024_12_11',
+                        # r'J:\ephys_data\CW49\python\2024_12_12',
+                        r'J:\ephys_data\CW49\python\2024_12_13',
+                        r'J:\ephys_data\CW49\python\2024_12_14',
+                        r'J:\ephys_data\CW49\python\2024_12_15',
+                        r'J:\ephys_data\CW49\python\2024_12_16',
+                
+                          ],
+                    [
+                        r'J:\ephys_data\CW53\python\2025_01_27',
+                        r'J:\ephys_data\CW53\python\2025_01_28',
+                        r'J:\ephys_data\CW53\python\2025_01_29',
+                        r'J:\ephys_data\CW53\python\2025_01_30',
+                        r'J:\ephys_data\CW53\python\2025_02_01',
+                        r'J:\ephys_data\CW53\python\2025_02_02',
+                          ],
+                    
+                    [r'G:\ephys_data\CW59\python\2025_02_22',
+                     r'G:\ephys_data\CW59\python\2025_02_24',
+                     r'G:\ephys_data\CW59\python\2025_02_25',
+                     r'G:\ephys_data\CW59\python\2025_02_26',
+                     r'G:\ephys_data\CW59\python\2025_02_28',
+                     ]]
 
 
-              [
-             # r'F:\data\BAYLORCW032\python\2023_10_24',
-            # r'F:\data\BAYLORCW034\python\2023_10_27',
-            # r'F:\data\BAYLORCW036\python\2023_10_30',
-            # r'F:\data\BAYLORCW035\python\2023_12_15',
-            # r'F:\data\BAYLORCW037\python\2023_12_15',
-            
-            r'H:\data\BAYLORCW044\python\2024_06_19',
-            r'H:\data\BAYLORCW044\python\2024_06_18',
-            
-            r'H:\data\BAYLORCW046\python\2024_06_28',
-            r'H:\data\BAYLORCW046\python\2024_06_27',
-            r'H:\data\BAYLORCW046\python\2024_06_26',
-            
-            ]]
+#%% early lick behavior analysis
 
-#%% early lick raster
+path = r'G:\ephys_data\CW59\python\2025_02_26'
 
-path = r'J:\ephys_data\CW53\python\2025_01_27'
 s1 = Session(path, passive=False)
 
+# Vanilla raster plot
+f=plt.figure(figsize=(5,5))
+for i in range(len(s1.early_lick_time)):
+    plt.scatter(s1.early_lick_time[i][:,0], np.ones(s1.early_lick_time[i].shape[0]) * i, color='grey')
+plt.axvline(s1.sample, ls = '--', color = 'black')
+plt.axvline(s1.delay, ls = '--', color = 'black')
+plt.axvline(s1.response, ls = '--', color = 'black')
+plt.ylabel('Trials')
+plt.xlabel('Time (s)')
+plt.title('Lick raster for early lick trials')
+
+# plot with direction information (L/r)
+f=plt.figure(figsize=(5,5))
+for i in range(len(s1.early_lick_time)):
+    for j in range(s1.early_lick_time[i].shape[0]):
+        if s1.early_lick_side[i][j] == 'l':
+            plt.scatter(s1.early_lick_time[i][j,0], i, color='red')
+        else:
+            plt.scatter(s1.early_lick_time[i][j,0], i, color='blue')
+
+plt.axvline(s1.sample, ls = '--', color = 'black')
+plt.axvline(s1.delay, ls = '--', color = 'black')
+plt.axvline(s1.response, ls = '--', color = 'black')
+plt.ylabel('Trials')
+plt.xlabel('Time (s)')
+plt.title('Lick raster for early lick trials')
+
+# Plot with direciton info but correct error
+instr_trials = s1.instructed_direction()
+all_instr_dir = np.array(instr_trials)[np.where(s1.early_lick)[0]]
+
+f=plt.figure(figsize=(5,5))
+for i in range(len(s1.early_lick_time)):
+    instr_dir = all_instr_dir[i]
+    for j in range(s1.early_lick_time[i].shape[0]):
+        if s1.early_lick_side[i][j] == instr_dir:
+            plt.scatter(s1.early_lick_time[i][j,0], i, color='green')
+        else:
+            plt.scatter(s1.early_lick_time[i][j,0], i, color='red')
+
+plt.axvline(s1.sample, ls = '--', color = 'black')
+plt.axvline(s1.delay, ls = '--', color = 'black')
+plt.axvline(s1.response, ls = '--', color = 'black')
+plt.ylabel('Trials')
+plt.xlabel('Time (s)')
+plt.title('Lick raster for early lick trials')
+
+#%% Plot as a histogram over time
+
+paths = [
+    r'J:\ephys_data\CW53\python\2025_01_27',
+    r'J:\ephys_data\CW53\python\2025_01_28',
+    r'J:\ephys_data\CW53\python\2025_01_29',
+    # r'J:\ephys_data\CW53\python\2025_01_30',
+    r'J:\ephys_data\CW53\python\2025_02_01',
+    r'J:\ephys_data\CW53\python\2025_02_02',
+      ]
+# paths = [r'G:\ephys_data\CW59\python\2025_02_22',
+#  r'G:\ephys_data\CW59\python\2025_02_24',
+#  r'G:\ephys_data\CW59\python\2025_02_25',
+#  r'G:\ephys_data\CW59\python\2025_02_26',
+#  r'G:\ephys_data\CW59\python\2025_02_28',
+#  ]
+colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple']
+binsize = 100 # ms
+buckets = np.arange(0, s1.response+binsize/1000, binsize/1000)
+f = plt.figure(figsize=(8,6))
+counter = 0
+for path in paths:
+    s1 = Session(path, passive=False)
+
+    early_lick_count = []
+    for i in range(len(s1.early_lick_time)): # every early lick trial
+    
+        counts, bin_edges = np.histogram(s1.early_lick_time[i][:,0], bins=buckets)
+        early_lick_count += [counts]
+
+    plt.plot(bin_edges[:-1], np.sum(early_lick_count, axis=0), label=path, alpha=0.7, color=colors[counter])
+    counter += 1
+plt.axvline(s1.sample, ls = '--', color = 'black')
+plt.axvline(s1.delay, ls = '--', color = 'black')
+plt.axvline(s1.response, ls = '--', color = 'black')
+plt.ylabel('Early lick count')
+plt.xlabel('Time (s)')
+plt.legend()
 
 
 
+#%% # Project regular CD choice onto early lick trials
 
-#%% Work with early lick info
+
+path =  r'G:\ephys_data\CW59\python\2025_02_26'
+s1 = Mode(path, side='R')
+
+cd_choice, _ = s1.plot_CD(mode_input='choice')
+
+early_lick_trials = np.where(s1.early_lick)[0]
+early_lick_left, early_lick_right = [],[] #collect idx of el sides
+for i in range(len(s1.early_lick_side)):
+    if s1.early_lick_side[i][0] == 'l':
+        early_lick_left += [i]
+    else:
+        early_lick_right += [i]
+early_lick_left = [i for i in early_lick_left if i in s1.i_good_trials]
+early_lick_right = [i for i in early_lick_right if i in s1.i_good_trials]
+time = s1.t
+
+# single trial view
+f=plt.figure()
+
+left_proj = []
+for t in early_lick_left:
+    time_adj = time[np.where(time<s1.early_lick_time[t][0][0])]
+    if len(time_adj) == 0:
+        continue
+    
+    trial = early_lick_trials[t]
+    activity, _, _ = s1.get_PSTH_multiple(s1.good_neurons, [trial], binsize=s1.binsize, timestep = s1.timestep)
+
+    # activity = activity - np.tile(np.mean(activityRL_train, axis=1)[:, None], (1, activity.shape[1]))
+    proj_allDim = np.dot(activity.T, cd_choice)
+    # proj_allDimR += [proj_allDim]
+    left_proj += [proj_allDim[:len(time_adj)]]
+    plt.plot(time_adj - time_adj[-1], proj_allDim[:len(time_adj)], 'r', alpha = 0.5,  linewidth = 0.5)
+
+
+right_proj=[]
+for t in early_lick_right:
+    time_adj = time[np.where(time<s1.early_lick_time[t][0][0])]
+    if len(time_adj) == 0:
+       continue
+    
+    trial = early_lick_trials[t]
+    activity, _, _ = s1.get_PSTH_multiple(s1.good_neurons, [trial], binsize=s1.binsize, timestep = s1.timestep)
+
+    # activity = activity - np.tile(np.mean(activityRL_train, axis=1)[:, None], (1, activity.shape[1]))
+    proj_allDim = np.dot(activity.T, cd_choice)
+    # proj_allDimR += [proj_allDim]
+    right_proj += [proj_allDim[:len(time_adj)]]
+    plt.plot(time_adj - time_adj[-1], proj_allDim[:len(time_adj)], 'b', alpha = 0.5,  linewidth = 0.5)
+    
+plt.xlabel('Time before lick (s)')
+plt.ylabel('CD choice projections')
+plt.show()
+# population average view
+#average if there an item
+max_len = max(len(lst) for lst in left_proj)
+time_left = time[:max_len] - time[max_len]
+avg_left,std_left = [], []
+for idx in range(1,max_len+1):
+    
+    vals = [i[-idx, 0] for i in left_proj if len(i)>idx]
+    avg_left += [np.mean(vals)]
+    std_left += [np.std(vals) / np.sqrt(len(vals))]
+avg_left.reverse()
+std_left.reverse()
+max_len = max(len(lst) for lst in right_proj)
+time_right = time[:max_len] - time[max_len]
+avg_right,std_right = [],[]
+for idx in range(1,max_len+1):
+    
+    vals = [i[-idx, 0] for i in right_proj if len(i)>idx]
+    avg_right += [np.mean(vals)]
+    std_right += [np.std(vals) / np.sqrt(len(vals))]
+
+avg_right.reverse()
+std_right.reverse()
+
+f = plt.figure()
+plt.plot(time_right, avg_right, color='b')
+plt.plot(time_left, avg_left, color='r')
+plt.fill_between(time_left, np.array(avg_left) - np.array(std_left), 
+         np.array(avg_left) + np.array(std_left),
+         color=['#ffaeb1'])
+plt.fill_between(time_right, np.array(avg_right) - np.array(std_right), 
+         np.array(avg_right) + np.array(std_right),
+         color=['#b4b2dc'])
+
+plt.xlabel('Time before lick (s)')
+plt.ylabel('CD choice projections')
+plt.show()
+#%% # calculate early lick cd
+
+path =  r'G:\ephys_data\CW59\python\2025_02_28'
+s1 = Mode(path, side='L')
+
+cd_choice, _ = s1.plot_CD(mode_input='choice')
+
+early_lick_trials = np.where(s1.early_lick)[0]
+early_lick_left, early_lick_right = [],[] #collect idx of el sides
+for i in range(len(s1.early_lick_side)):
+    if s1.early_lick_side[i][0] == 'l':
+        early_lick_left += [i]
+    else:
+        early_lick_right += [i]
+early_lick_left = [i for i in early_lick_left if i in s1.i_good_trials]
+early_lick_right = [i for i in early_lick_right if i in s1.i_good_trials]
+time = s1.t
+
+#%% IMAGING: Work with early lick info
 
 naivepath, learningpath, expertpath = [
             r'H:\data\BAYLORCW046\python\2024_05_29',
