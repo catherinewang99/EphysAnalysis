@@ -103,18 +103,22 @@ paths = [
                 
                           ]
 
+paths = [r'L:\data\CW70\python\2025_10_28',
+         ]
+
 # for path in paths:
 #     s1 = Session(path, passive=False)
 #     print(set(s1.stim_level))
-path = r'J:\ephys_data\CW49\python\2024_12_15'
+path = r'L:\data\CW70\python\2025_10_29'
 s1 = Session(path, passive=False)
 
 
 #%% Plot distribution of waveform withs
 
 values = []
-for path in cat(all_learning_paths):
-    s1 = Session(path, passive=False)
+# for path in cat(all_learning_paths):
+for path in paths:
+    s1 = Session(path, passive=False, filter_by_stim=False)
     for n in range(s1.num_neurons):
         
         # if s1.celltype[n] == 3:# or s1.celltype[n] == 3:
@@ -133,8 +137,10 @@ plt.xlabel('Spike trough-to-peak (ms)')
 celltypes = [3,1] # FS and ppyr
 
 f = plt.figure()
-for path in cat(all_learning_paths):
-    s1 = Session(path, passive=False)
+# for path in cat(all_learning_paths):
+for path in paths:
+
+    s1 = Session(path, passive=False, filter_by_stim=False)
     for c in celltypes:
         neuron_cell_type = np.where(s1.celltype == c)[0]
         color = 'red' if c == 1 else 'black'
@@ -175,12 +181,44 @@ plt.xlabel('Spike trough-to-peak (ms)')
 
 stim_spk, ctl_spk = [],[]
 
-for path in cat(all_learning_paths):
-    s1 = Session(path, passive=False)#, side='R')
-    sided_neurons = s1.L_alm_idx
+# for path in cat(all_learning_paths):
+for path in paths:    
+    s1 = Session(path, passive=False, filter_by_stim=True)#, side='R')
+    sided_neurons = s1.R_alm_idx
     
-    stim_trials = s1.i_good_L_stim_trials
-    window = (0.570 + 1.3 + 0.5, 0.570 + 1.3 + 1) # First second of delay
+    stim_trials = s1.i_good_R_stim_trials
+    window = (0.570 + 1.3 + 0, 0.570 + 1.3 + 1.0) # First second of delay
+    
+    for n in sided_neurons:
+        # if s1.shank[n] == 2 or s1.shank[n] == 3:
+        #     continue 
+        ctl_rate = s1.get_spike_rate(n, window, s1.i_good_non_stim_trials)
+        if ctl_rate < 1:
+            continue
+        stim_spk += [s1.get_spike_rate(n, window, stim_trials)]
+        ctl_spk += [ctl_rate]
+        
+        
+f = plt.figure()
+plt.scatter(ctl_spk, stim_spk, color='blue')
+plt.plot([0, max(ctl_spk)], [0, max(ctl_spk)], ls='--', color='black')
+plt.ylabel('Photoinhibition (spks/s)')
+plt.xlabel('Control (spks/s)')
+plt.title('outside shanks')
+plt.show()
+
+
+#%% Bilat stim if it applies
+
+stim_spk, ctl_spk = [],[]
+
+# for path in cat(all_learning_paths):
+for path in paths:    
+    s1 = Session(path, passive=False, filter_by_stim=True)#, side='R')
+    sided_neurons = s1.R_alm_idx
+    sided_neurons = s1.good_neurons
+    stim_trials = s1.i_good_bi_stim_trials
+    window = (0.570 + 1.3 + 0, 0.570 + 1.3 + 1) # First second of delay
     
     for n in sided_neurons:
         ctl_rate = s1.get_spike_rate(n, window, s1.i_good_non_stim_trials)
@@ -196,10 +234,6 @@ plt.plot([0, max(ctl_spk)], [0, max(ctl_spk)], ls='--', color='black')
 plt.ylabel('Photoinhibition (spks/s)')
 plt.xlabel('Control (spks/s)')
 plt.show()
-
-
-
-
 
 
 
@@ -296,7 +330,8 @@ plt.show()
 
 # Raster
 
-n=neuron_cell_type[94]
+n=neuron_cell_type[0
+                   ]
 
 for stim_level in s1.all_stim_levels: 
 # for stim_level in [s1.all_stim_levels[-1]]:
@@ -310,6 +345,13 @@ for stim_level in s1.all_stim_levels:
     ax.set_title('Stim power: {}'.format(stim_level))
     
     ax.set_xlim(0.57, 0.57+0.4)
+
+#%% Plot single neuron rasters
+for n in s1.R_alm_idx:
+    if s1.shank[n] == 1 or s1.shank[n] == 4: # Lateral probes
+        s1.plot_raster_and_PSTH(n, opto=True, stimside='R')
+        plt.show()
+
 
 
 

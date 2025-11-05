@@ -90,11 +90,14 @@ all_naive_paths = [
                     ]
 
 
+paths = [r'L:\data\CW60\python\2025_06_26',
+         r'L:\data\CW60\python\2025_06_30',
+         r'L:\data\CW60\python\2025_07_01']
 #%% Just selectivity plot whole trial epoch
 
 left_sel, right_sel = [], []
-for path in cat(all_expert_paths):
-    s1 = Session(path, passive=False, side='L', anterior_shank=True)
+for path in paths:
+    s1 = Session(path, passive=False, side='L', anterior_shank=False)
 
     p=0.05/len(s1.good_neurons)
     all_neurons = s1.get_epoch_selective(epoch=(s1.sample, s1.response + 2.5), p=p)

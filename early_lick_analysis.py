@@ -90,6 +90,7 @@ all_expert_paths = [[
 #%% early lick behavior analysis
 
 path = r'G:\ephys_data\CW59\python\2025_02_26'
+path = r'G:\ephys_data\CW62\python\2025_06_24'
 
 s1 = Session(path, passive=False)
 

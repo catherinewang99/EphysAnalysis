@@ -30,14 +30,16 @@ path = r'G:\ephys_data\CW63\python\2025_03_21'
 # path = r'G:\ephys_data\CW61\python\2025_03_12'
 path = r'J:\ephys_data\CW53\python\2025_01_31'
 # path = r'G:\ephys_data\CW59\python\2025_02_27'
+path = r'L:\data\CW60\python\2025_06_29'
+
 passive=False
 s1 = Session(path, passive=passive, filter_low_perf=False, filter_by_stim=False, laser = 'red')
 
 window = (0.57, 0.57+1.3) if passive else (0.57, 0.57+2.3) 
 
 
-stim_trials = np.where(s1.stim_level == 2.7)[0]
-control_trials = np.where(s1.stim_level == 0)[0]
+stim_trials = np.where(s1.stim_level > 2)[0]
+control_trials = np.where(s1.stim_level < 2)[0]
 
 sig_effect = []
 for n in s1.L_alm_idx:
@@ -164,14 +166,15 @@ path = r'G:\ephys_data\CW63\python\2025_03_21'
 # path = r'G:\ephys_data\CW61\python\2025_03_12'
 path = r'J:\ephys_data\CW53\python\2025_01_31'
 # path = r'G:\ephys_data\CW59\python\2025_02_27'
+path = r'L:\data\CW60\python\2025_06_29'
 
 passive=False
 s1 = Session(path, passive=passive, filter_low_perf=False, filter_by_stim=False, laser = 'red')
 
 
-stim_trials = np.where(s1.stim_level == 2.7)[0]
-control_trials = np.where(s1.stim_level == 0)[0]
-sided_neurons = s1.L_alm_idx
+stim_trials = np.where(s1.stim_level > 2)[0]
+control_trials = np.where(s1.stim_level < 2)[0]
+sided_neurons = s1.R_alm_idx
 
 # Plot control vs stim scatter
     
@@ -200,7 +203,7 @@ for i in range(len(sided_neurons)):
     
     # if stim_rate/ctl_rate > 0.4 and stim_rate/ctl_rate < 1:
     #     middle_neurons += [n]
-    color='orange' if sig_effect[i] == 1 else 'blue'
+    color='orange' if sig_effect_R[i] == 1 else 'blue'
     if sig_effect[i] == 0:
         color = 'grey'
     plt.scatter(ctl_rate, stim_rate, color=color)
@@ -362,9 +365,9 @@ for i in range(4):
 
 path = r'J:\ephys_data\CW53\python\2025_01_31'
 # path = r'G:\ephys_data\CW59\python\2025_02_27'
-
+path = r'L:\data\CW60\python\2025_06_29'
 s1 = Session(path, passive=False, filter_low_perf=True, filter_by_stim=False, laser='red')
-left_info, right_info = s1.selectivity_optogenetics(epoch = (s1.sample , s1.delay),
+left_info, right_info = s1.selectivity_optogenetics(epoch = (s1.delay , s1.response),
                                                     p=0.05                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         , 
                                                     binsize=150, 
                                                     timestep=50,

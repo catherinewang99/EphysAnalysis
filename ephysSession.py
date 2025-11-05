@@ -168,7 +168,10 @@ class Session:
                                      np.where(self.R_ignore)[0]))) 
         
         self.stim_ON = cat(behavior['StimDur_tmp']) > 0
-        
+        if 'CW60' in path: # labels messed up for some reason
+            self.stim_level = cat(behavior['StimLevel'])
+            self.stim_ON = self.stim_level > 0.2
+
         self.i_good_trials = cat(behavior['i_good_trials']) - 1 # zero indexing in python
         if filter_low_perf:
             self.filter_low_performance()        
@@ -192,12 +195,16 @@ class Session:
             if not passive and laser == 'blue':
                 x_galvo = cat(behavior['xGalvo'])
                 self.stim_side = np.where(x_galvo < 0, 'L', 'R')
+                bilat_idx = np.where(x_galvo > 7)[0]
+                if len(bilat_idx) != 0:
+                    self.stim_side[bilat_idx] = 'B'
             elif laser == 'red':
                 self.stim_side = np.full(self.num_trials, 'L')
                 
         self.i_good_R_stim_trials = [t for t in self.i_good_trials if self.stim_side[t] == 'R' and self.stim_ON[t] and not self.early_lick[t]]
         self.i_good_L_stim_trials = [t for t in self.i_good_trials if self.stim_side[t] == 'L' and self.stim_ON[t] and not self.early_lick[t]]
-
+        if len(bilat_idx) != 0:
+            self.i_good_bi_stim_trials = [t for t in self.i_good_trials if self.stim_side[t] == 'B' and self.stim_ON[t] and not self.early_lick[t]]
         
         # Re-adjust with i good trials
         self.stim_trials = np.where(self.stim_ON)[0]

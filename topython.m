@@ -4,6 +4,7 @@ addpath('./func/')
 path = 'H:\ephys_data\CW47\';
 path = 'G:\ephys_data\CW62\';
 % path = 'J:\ephys_data\CW49\';
+path = 'L:\data\CW70\';
 
 mkdir([path 'python'])
 
@@ -138,7 +139,11 @@ for j = 1:length(lst)
             if max(wave_xGalvo_tmp) < 0.1
                 xGalvo(i_solo_trial,:) = min(wave_xGalvo_tmp);
             else
-                xGalvo(i_solo_trial,:) = max(wave_xGalvo_tmp);
+                if min(wave_xGalvo_tmp) < -0.1
+                    xGalvo(i_solo_trial,:) = 10; %indicates bilateral
+                else
+                    xGalvo(i_solo_trial,:) = max(wave_xGalvo_tmp);
+                end
             end
 
             % Lick information

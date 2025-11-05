@@ -210,7 +210,9 @@ def plot_selectivity_recovery(s1, left_info, right_info):
     axarr[0,0].set_ylabel('Selectivity')
     
     # plt.suptitle('{} ALM recording ({} neurons)'.format(s1.side, len(all_control_sel)))
-    
+    # axarr[0,0].set_ylim(-5,15)
+    # axarr[1,1].set_ylim(bottom=-2)
+
     plt.show()
 
 
@@ -264,14 +266,15 @@ axarr[0].set_xlabel('Time from Go cue (s)')
 axarr[0].set_ylabel('Selectivity')
 
 plt.suptitle('{} ALM recording ({} neurons)'.format(s1.side, len(s1.selective_neurons)))
-
 plt.show()
 
 #%% Single FOV view
 # path = r'H:\ephys_data\CW47\python\2024_10_25'
 path =     r'J:\ephys_data\CW53\python\2025_01_29'
 path = r'G:\ephys_data\CW62\python\2025_06_24'
-               
+path = r'L:\data\CW60\python\2025_06_28'
+path = r'L:\data\CW60\python\2025_07_03'
+
                     # [r'G:\ephys_data\CW59\python\2025_02_22',
                     #  r'G:\ephys_data\CW59\python\2025_02_24',
                     #  r'G:\ephys_data\CW59\python\2025_02_25',
@@ -298,14 +301,15 @@ path = r'G:\ephys_data\CW62\python\2025_06_24'
 # path =r'G:\ephys_data\CW59\python\2025_02_28'
 
 # s1 = Session(path, passive=False, filter_low_perf=True, filter_by_stim=False, laser='red') # red laser session
-s1 = Session(path, passive=False, filter_low_perf=True, filter_by_stim=True) # blue laser session
+s1 = Session(path, passive=False, filter_low_perf=True, filter_by_stim=True, anterior_shank=False) # blue laser session
 s1.filter_low_performance(threshold=0.6, consec_len=20)
 epoch = (s1.sample, s1.delay)
+epoch = (s1.delay, s1.response)
 left_info, right_info = s1.selectivity_optogenetics(epoch = epoch,
-                                                    p=0.2, 
+                                                    p=0.05, 
                                                     binsize=200, 
                                                     timestep=100,
-                                                    bootstrap=False)
+                                                    bootstrap=True)
 plot_selectivity_recovery(s1, left_info, right_info)
 
 
