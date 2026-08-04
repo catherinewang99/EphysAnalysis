@@ -15,16 +15,43 @@ import copy
 import scipy.io as scio
 from sklearn.preprocessing import normalize
 from ephysSession import Session
-import sympy
 from random import shuffle
 import time as time_func
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 plt.rcParams['pdf.fonttype'] = 42 
 
+
+def _rref_numpy(A, tol=1e-10):
+    """Reduced row echelon form and pivot column indices (numpy, no sympy)."""
+    A = np.asarray(A, dtype=float)
+    m, n = A.shape
+    pivot_columns = []
+    row = 0
+    for col in range(n):
+        if row >= m:
+            break
+        # Find pivot in this column
+        pivot_row = np.argmax(np.abs(A[row:, col])) + row
+        if np.abs(A[pivot_row, col]) <= tol:
+            continue
+        pivot_columns.append(col)
+        # Swap rows
+        A[[row, pivot_row], :] = A[[pivot_row, row], :]
+        # Scale pivot row
+        A[row, :] = A[row, :] / A[row, col]
+        # Eliminate column in other rows
+        for i in range(m):
+            if i != row and np.abs(A[i, col]) > tol:
+                A[i, :] = A[i, :] - A[i, col] * A[row, :]
+        row += 1
+    return A, pivot_columns
+
+
 class Mode(Session):
     def __init__(self, path, side = 'all', stimside = 'all', 
                  passive=False, laser='blue', only_ppyr=True,
                  proportion_train = 0.5, lickdir=False,
+                 filter_low_perf=True, filter_by_stim=True,
                  responsive_neurons = [], train_test_trials = [],
                  binsize=400, timestep=10):
 
@@ -69,7 +96,8 @@ class Mode(Session):
         """
         # Inherit all parameters and functions of session.py
         super().__init__(path=path, side=side, passive=passive, laser=laser,
-                         only_ppyr=only_ppyr)
+                         only_ppyr=only_ppyr, filter_low_perf= filter_low_perf,
+                         filter_by_stim = filter_by_stim)
         
         self.lickdir = lickdir
         self.binsize = binsize
@@ -277,8 +305,8 @@ class Mode(Session):
                     flag = 1
     
             if flag == 0:
-                ref_A, pivot_columns = sympy.Matrix(A).rref() # double check if works
-    
+                ref_A, pivot_columns = _rref_numpy(A)
+
                 B = np.zeros((m, len(pivot_columns)))
     
                 for i in range(len(pivot_columns)):

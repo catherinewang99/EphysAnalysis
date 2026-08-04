@@ -274,7 +274,27 @@ path =     r'J:\ephys_data\CW53\python\2025_01_29'
 path = r'G:\ephys_data\CW62\python\2025_06_24'
 path = r'L:\data\CW60\python\2025_06_28'
 path = r'L:\data\CW60\python\2025_07_03'
+path = r'L:\data\CW70\python\2025_10_27'
+path = r'L:\data\CW68\python\2025_12_12'
 
+paths = [             
+    
+              r'K:\data\CW69\python\2025_12_19',
+ 
+
+    
+           #   r'L:\data\CW68\python\2025_12_10',
+           #  r'L:\data\CW68\python\2025_12_12',
+           # r'L:\data\CW68\python\2025_12_13',
+           # # r'L:\data\CW68\python\2025_12_14',
+           
+          
+           #   r'L:\data\CW68\python\2025_12_15',
+          
+          
+           #  r'L:\data\CW70\python\2025_11_04',
+           
+           ]
                     # [r'G:\ephys_data\CW59\python\2025_02_22',
                     #  r'G:\ephys_data\CW59\python\2025_02_24',
                     #  r'G:\ephys_data\CW59\python\2025_02_25',
@@ -299,18 +319,18 @@ path = r'L:\data\CW60\python\2025_07_03'
   #       r'G:\ephys_data\CW63\python\2025_03_25',]
                           
 # path =r'G:\ephys_data\CW59\python\2025_02_28'
-
-# s1 = Session(path, passive=False, filter_low_perf=True, filter_by_stim=False, laser='red') # red laser session
-s1 = Session(path, passive=False, filter_low_perf=True, filter_by_stim=True, anterior_shank=False) # blue laser session
-s1.filter_low_performance(threshold=0.6, consec_len=20)
-epoch = (s1.sample, s1.delay)
-epoch = (s1.delay, s1.response)
-left_info, right_info = s1.selectivity_optogenetics(epoch = epoch,
-                                                    p=0.05, 
-                                                    binsize=200, 
-                                                    timestep=100,
-                                                    bootstrap=True)
-plot_selectivity_recovery(s1, left_info, right_info)
+for path in paths:
+    # s1 = Session(path, passive=False, filter_low_perf=True, filter_by_stim=False, laser='red') # red laser session
+    s1 = Session(path, passive=False, filter_low_perf=True, filter_by_stim=True, anterior_shank=False) # blue laser session
+    # s1.filter_low_performance(threshold=0.6, consec_len=20)
+    epoch = (s1.sample, s1.delay)
+    epoch = (s1.delay, s1.response)
+    left_info, right_info = s1.selectivity_optogenetics(epoch = epoch,
+                                                        p=0.05, 
+                                                        binsize=200, 
+                                                        timestep=100,
+                                                        bootstrap=True)
+    plot_selectivity_recovery(s1, left_info, right_info)
 
 
 #%% Get single view of modularity, variability across neurons
@@ -650,7 +670,23 @@ paths = [r'G:\ephys_data\CW59\python\2025_02_22',
   r'G:\ephys_data\CW59\python\2025_02_28',
   
   ]
+allpaths = [[             
+    
+            # r'K:\data\CW69\python\2025_12_18',
+             r'K:\data\CW69\python\2025_12_19',
+ 
 
+    
+             r'L:\data\CW68\python\2025_12_10',
+            r'L:\data\CW68\python\2025_12_12',
+           r'L:\data\CW68\python\2025_12_13',
+           # r'L:\data\CW68\python\2025_12_14',
+           
+          
+             r'L:\data\CW68\python\2025_12_15',
+          
+          
+            r'L:\data\CW70\python\2025_11_04',]]
 # paths = [r'J:\ephys_data\CW54\python\2025_02_01',
 #         r'J:\ephys_data\CW54\python\2025_02_03']
 
@@ -692,7 +728,7 @@ for paths in allpaths:
         control_sel, opto_sel_stim_left, opto_sel_stim_right, time = left_info
         control_sel_R, opto_sel_stim_left_R, opto_sel_stim_right_R, _ = right_info
     
-        period = np.where((time > s1.delay) & (time < s1.delay + 1))[0] # Coupling
+        period = np.where((time > s1.delay +0) & (time < s1.delay + 1))[0] # Coupling
         
         # period = np.where((time > s1.delay + 1) & (time < s1.delay + 3))[0] # Robustness
         

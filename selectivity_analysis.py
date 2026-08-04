@@ -93,6 +93,11 @@ all_naive_paths = [
 paths = [r'L:\data\CW60\python\2025_06_26',
          r'L:\data\CW60\python\2025_06_30',
          r'L:\data\CW60\python\2025_07_01']
+
+paths = [
+        # r'L:\data\CW70\python\2025_10_27',
+         r'L:\data\CW68\python\2025_12_12',
+         ]
 #%% Just selectivity plot whole trial epoch
 
 left_sel, right_sel = [], []
@@ -100,6 +105,7 @@ for path in paths:
     s1 = Session(path, passive=False, side='L', anterior_shank=False)
 
     p=0.05/len(s1.good_neurons)
+    p=0.05
     all_neurons = s1.get_epoch_selective(epoch=(s1.sample, s1.response + 2.5), p=p)
     epochs = [(s1.sample, s1.response + 2.5) for _ in range(len(all_neurons))]
     epochs = [(s1.delay, s1.response) for _ in range(len(all_neurons))]
@@ -110,9 +116,10 @@ for path in paths:
     else:
         left_sel = np.vstack((left_sel, sel))
 
-    s1 = Session(path, passive=False, side='R', anterior_shank=True)
+    s1 = Session(path, passive=False, side='R', anterior_shank=False)
 
     p=0.05/len(s1.good_neurons)
+    p=0.05
     all_neurons = s1.get_epoch_selective(epoch=(s1.sample, s1.response + 2.5), p=p)
     epochs = [(s1.sample, s1.response + 2.5) for _ in range(len(all_neurons))]
     epochs = [(s1.delay, s1.response) for _ in range(len(all_neurons))]
@@ -160,7 +167,8 @@ for j in range(2):
 #%% Just selectivity plot delay epoch
 
 left_sel, right_sel = [], []
-for path in (all_learning_paths[2]):
+# for path in (all_learning_paths[2]):
+for path in paths:
     s1 = Session(path, passive=False, side='L', anterior_shank=True)
 
     p=0.05/len(s1.good_neurons)

@@ -38,7 +38,7 @@ from scipy.signal import fftconvolve
 import time as time_
 
 from concurrent.futures import ThreadPoolExecutor
-from tqdm import tqdm
+# from tqdm import tqdm
 
 
 class Session:
@@ -60,7 +60,8 @@ class Session:
                  passive=False, laser='blue', only_ppyr=True,
                  filter_low_perf=True, filter_by_stim=True,
                  anterior_shank=False,
-                 include_early_lick=False):
+                 include_early_lick=False,
+                 remove_consec_opto=False):
         
 
         """
@@ -173,10 +174,17 @@ class Session:
             self.stim_ON = self.stim_level > 0.2
 
         self.i_good_trials = cat(behavior['i_good_trials']) - 1 # zero indexing in python
-        if filter_low_perf:
+        
+        if os.path.exists(path + r'\good_trial_inds.npy'):
+            print('Loading good trial inds from file')
+            good_trial_inds = np.load(path + r'\good_trial_inds.npy')
+            self.i_good_trials = good_trial_inds
+
+        elif filter_low_perf:
             self.filter_low_performance()        
 
-        
+        # if not os.path.exists(path + r'\good_trial_inds.npy') and 'CW91' in path: potentially remove this
+
         # Take out non stable trials from igoodtrials
         stable_trials_tmp = self.stable_trials[self.good_neurons] # Only filter based on the relevant neurons
         common_values = stable_trials_tmp[0]
@@ -186,8 +194,22 @@ class Session:
         
         self.i_good_trials = np.intersect1d(common_values, self.i_good_trials)
         self.i_good_non_stim_trials = [t for t in self.i_good_trials if not self.stim_ON[t] and not self.early_lick[t]]
-        self.i_good_stim_trials = [t for t in self.i_good_trials if self.stim_ON[t] and not self.early_lick[t]]
-        
+
+        # Re-adjust with i good trials
+        self.stim_trials = np.where(self.stim_ON)[0]
+        if remove_consec_opto:
+            flip_indices = []
+            for i in range(len(self.stim_trials)-1):
+                # for j in range(1, len(self.stim_trials)):
+                if self.stim_trials[i+1]-self.stim_trials[i] == 1:
+                    # if self.stim_trials[i-1] not in flip_indices: # If the prev index not already removed
+                    flip_indices += [self.stim_trials[i+1]]
+            
+            self.stim_ON[flip_indices] = False
+            self.stim_trials = np.where(self.stim_ON)[0]
+            print('Removed {} consecutive stim trials'.format(len(flip_indices)))
+        self.i_good_stim_trials = [t for t in self.stim_trials if not self.early_lick[t]]
+
         
         if 'StimLevel' in behavior.keys():
             self.stim_level = cat(behavior['StimLevel'])
@@ -200,15 +222,16 @@ class Session:
                     self.stim_side[bilat_idx] = 'B'
             elif laser == 'red':
                 self.stim_side = np.full(self.num_trials, 'L')
+                bilat_idx = []
                 
         self.i_good_R_stim_trials = [t for t in self.i_good_trials if self.stim_side[t] == 'R' and self.stim_ON[t] and not self.early_lick[t]]
         self.i_good_L_stim_trials = [t for t in self.i_good_trials if self.stim_side[t] == 'L' and self.stim_ON[t] and not self.early_lick[t]]
         if len(bilat_idx) != 0:
             self.i_good_bi_stim_trials = [t for t in self.i_good_trials if self.stim_side[t] == 'B' and self.stim_ON[t] and not self.early_lick[t]]
         
-        # Re-adjust with i good trials
-        self.stim_trials = np.where(self.stim_ON)[0]
-        
+
+
+
         if only_ppyr:
             oldn = len(self.good_neurons)
             self.good_neurons = [n for n in self.good_neurons if n in np.where(self.celltype == 3)[0]]
@@ -235,7 +258,8 @@ class Session:
         
     ### BEHAVIOR ONLY FUNCTIONS ###
     
-    def get_acc_conv(self, window = 50):
+    def get_acc_conv(self, window = 50, use_all_trials=False,
+                     trial_idx=None):
         """Returns agg accuracy over all sessions
         
         Parameters
@@ -257,11 +281,22 @@ class Session:
         window = int(window/2)
 
         
-        correct = self.L_correct + self.R_correct
+        if use_all_trials:
+            correct = self.L_correct + self.R_correct
+        elif trial_idx is not None:
+            correct = self.L_correct[trial_idx] + self.R_correct[trial_idx]
+        else:
+            correct = self.L_correct[self.i_good_trials] + self.R_correct[self.i_good_trials]
         correct = np.convolve(correct, np.ones(window*2)/(window*2), mode = 'same')
         correctarr = np.append(correctarr, correct[window:-window])
-        
-        earlylicks = np.convolve(self.early_lick, np.ones(window*2)/(window*2), mode = 'same')
+
+        if use_all_trials:
+            earlylicks = self.early_lick
+        elif trial_idx is not None:
+            earlylicks = self.early_lick[trial_idx]
+        else:
+            earlylicks = self.early_lick[self.i_good_trials]
+        earlylicks = np.convolve(earlylicks, np.ones(window*2)/(window*2), mode = 'same')
         earlylicksarr = np.append(earlylicksarr, earlylicks[window:-window])
           
         return earlylicksarr, correctarr, cat(([0], num_trials))
@@ -667,13 +702,15 @@ class Session:
         Vectorized: Get spike counts per trial for a specific neuron and time window.
         """
         start, stop = window
-    
+        # Flatten so trials is always 1D (handles both [1,2,3] and [[1,2,3]])
+        trials = np.atleast_1d(trials).ravel()
+
         # Extract all spike times for the neuron and selected trials
         trial_spks = self.spks[neuron][0, trials]
-    
+
         # Use list comprehension + NumPy for speed
         counts = [np.sum((spk >= start) & (spk < stop)) for spk in trial_spks]
-    
+
         return counts
     
     def get_spike_count_old(self, neuron, window, trials):
@@ -877,15 +914,18 @@ class Session:
             PSTH, time, stderr = self.get_PSTH(neuron = neuron, trials=trials, 
                                                binsize=binsize, timestep=timestep,
                                                period=window)
-            # if len(PSTH) == 0:
-                # drop_n += [neuron]
+            
+            # Not a problem if trials are in i_good_trials
+            if len(PSTH) == 0:
+                drop_n += [neuron]
                 
-                # continue
+                continue
             
             all_PSTH += [PSTH]
             all_std_err += [stderr]
 
         # return 
+
         if len(drop_n) == 0:
             return np.array(all_PSTH), time, np.array(all_std_err)       
         else:
@@ -941,7 +981,9 @@ class Session:
         
         
     def plot_raster_and_PSTH(self, neuron, window=(), opto=False,
+                             trial_type=True,
                              binsize=200, timestep=10, stimside = 'both',
+                             stim_only = False,
                              save=[]):
         """
         
@@ -962,9 +1004,9 @@ class Session:
 
         """
         # stable_trials = self.stable_trials[neuron]
-        L_correct_trials = self.lick_correct_direction('l')
+        L_correct_trials = self.trial_type_direction('l') if trial_type else self.lick_correct_direction('l')
         L_correct_trials = [i for i in L_correct_trials if not self.stim_ON[i]]# and i in stable_trials]
-        R_correct_trials = self.lick_correct_direction('r')
+        R_correct_trials = self.trial_type_direction('r') if trial_type else self.lick_correct_direction('r')
         R_correct_trials = [i for i in R_correct_trials if not self.stim_ON[i]]# and i in stable_trials]
         
         if not opto:
@@ -1036,6 +1078,7 @@ class Session:
             #RASTER:
             counter = 0
             for i in R_correct_trials:
+                print(i)
                 axarr[0, 0].scatter(self.spks[neuron][0, i], 
                             np.ones(len(self.spks[neuron][0, i])) * counter, 
                             color='blue', s=5)
@@ -1159,10 +1202,258 @@ class Session:
             if len(save) != 0:
                 plt.savefig(save)
             plt.show()
+
+
+        elif stim_only:
+             # Setup titles for all three columns (Control, Left Stim, Right Stim)
+            # title_control = "Neuron {}: Control".format(neuron)
+            title_left = "Neuron {}: Left stim".format(neuron)
+            title_right = "Neuron {}: Right stim".format(neuron)
+
+            # Prepare 2x3 grid, each col is: control, left stim, right stim
+            f, axarr = plt.subplots(2, 2, sharex='col', figsize=(12, 6))
+
+            ### CONTROL ###
+            L_av, time, _ = self.get_PSTH(neuron, L_correct_trials, binsize=binsize, timestep=timestep)
+            R_av, _, _ = self.get_PSTH(neuron, R_correct_trials, binsize=binsize, timestep=timestep)
+            vmax = max(cat([R_av, L_av]))
+            axarr[1, 0].plot(time, L_av, color='red', linestyle = (0, (20, 20)))
+            axarr[1, 0].plot(time, R_av, color='blue', linestyle = (0, (20, 20)))
+
+
+            axarr[1, 1].plot(time, L_av, color='red', linestyle = (0, (20, 20)))
+            axarr[1, 1].plot(time, R_av, color='blue', linestyle = (0, (20, 20)))
+
+            axarr[0, 0].axvline(self.sample, linestyle='--', color='white')
+            axarr[0, 0].axvline(self.delay, linestyle='--', color='white')
+            axarr[0, 0].axvline(self.response, linestyle='--', color='white')
+            axarr[1, 0].axvline(self.sample, linestyle='--', color='lightgrey')
+            axarr[1, 0].axvline(self.delay, linestyle='--', color='lightgrey')
+            axarr[1, 0].axvline(self.response, linestyle='--', color='lightgrey')
+            axarr[1, 0].set_ylabel('Spike rate (Hz)')
+            axarr[1, 0].set_xlabel('Time (s)')
+
+            ### LEFT STIM ###
+            # trials with stim ON & stim_side == 'L'
+            stimside_left = 'L'
+            L_opto_trials_L = self.trial_type_direction('l')
+            L_opto_trials_L = [i for i in L_opto_trials_L if self.stim_ON[i] and self.stim_side[i] == stimside_left]
+            R_opto_trials_L = self.trial_type_direction('r')
+            R_opto_trials_L = [i for i in R_opto_trials_L if self.stim_ON[i] and self.stim_side[i] == stimside_left]
+
+            counter = 0
+            for i in R_opto_trials_L:
+                axarr[0, 0].scatter(self.spks[neuron][0, i],
+                                    np.ones(len(self.spks[neuron][0, i])) * counter,
+                                    color='blue', s=5)
+                counter += 1
+            for i in L_opto_trials_L:
+                axarr[0, 0].scatter(self.spks[neuron][0, i],
+                                    np.ones(len(self.spks[neuron][0, i])) * counter,
+                                    color='red', s=5)
+                counter += 1
+
+            axarr[0, 0].axis('off')
+            L_av_L, time_L, left_err_L = self.get_PSTH(neuron, L_opto_trials_L, binsize=binsize, timestep=timestep)
+            R_av_L, _, right_err_L = self.get_PSTH(neuron, R_opto_trials_L, binsize=binsize, timestep=timestep)
+            vmax_left = max(cat([R_av_L, L_av_L]))
+            axarr[1, 0].plot(time_L, L_av_L, 'r-')
+            axarr[1, 0].plot(time_L, R_av_L, 'b-')
+            axarr[1, 0].fill_between(time_L, L_av_L - left_err_L, L_av_L + left_err_L, color=['#ffaeb1'])
+            axarr[1, 0].fill_between(time_L, R_av_L - right_err_L, R_av_L + right_err_L, color=['#b4b2dc'])
+            axarr[0, 0].axvline(self.sample, linestyle='--', color='white')
+            axarr[0, 0].axvline(self.delay, linestyle='--', color='white')
+            axarr[0, 0].axvline(self.response, linestyle='--', color='white')
+            axarr[1, 0].axvline(self.sample, linestyle='--', color='lightgrey')
+            axarr[1, 0].axvline(self.delay, linestyle='--', color='lightgrey')
+            axarr[1, 0].axvline(self.response, linestyle='--', color='lightgrey')
+            axarr[0, 0].set_title(title_left)
+
+            ### RIGHT STIM ###
+            stimside_right = 'R'
+            L_opto_trials_R = self.trial_type_direction('l')
+            L_opto_trials_R = [i for i in L_opto_trials_R if self.stim_ON[i] and self.stim_side[i] == stimside_right]
+            R_opto_trials_R = self.trial_type_direction('r')
+            R_opto_trials_R = [i for i in R_opto_trials_R if self.stim_ON[i] and self.stim_side[i] == stimside_right]
+
+            counter = 0
+            for i in R_opto_trials_R:
+                axarr[0, 1].scatter(self.spks[neuron][0, i],
+                                    np.ones(len(self.spks[neuron][0, i])) * counter,
+                                    color='blue', s=5)
+                counter += 1
+            for i in L_opto_trials_R:
+                axarr[0, 1].scatter(self.spks[neuron][0, i],
+                                    np.ones(len(self.spks[neuron][0, i])) * counter,
+                                    color='red', s=5)
+                counter += 1
+
+            axarr[0, 1].axis('off')
+            L_av_R, time_R, left_err_R = self.get_PSTH(neuron, L_opto_trials_R, binsize=binsize, timestep=timestep)
+            R_av_R, _, right_err_R = self.get_PSTH(neuron, R_opto_trials_R, binsize=binsize, timestep=timestep)
+            vmax_right = max(cat([R_av_R, L_av_R]))
+            axarr[1, 1].plot(time_R, L_av_R, 'r-')
+            axarr[1, 1].plot(time_R, R_av_R, 'b-')
+            axarr[1, 1].fill_between(time_R, L_av_R - left_err_R, L_av_R + left_err_R, color=['#ffaeb1'])
+            axarr[1, 1].fill_between(time_R, R_av_R - right_err_R, R_av_R + right_err_R, color=['#b4b2dc'])
+            axarr[0, 1].axvline(self.sample, linestyle='--', color='white')
+            axarr[0, 1].axvline(self.delay, linestyle='--', color='white')
+            axarr[0, 1].axvline(self.response, linestyle='--', color='white')
+            axarr[1, 1].axvline(self.sample, linestyle='--', color='lightgrey')
+            axarr[1, 1].axvline(self.delay, linestyle='--', color='lightgrey')
+            axarr[1, 1].axvline(self.response, linestyle='--', color='lightgrey')
+            axarr[0, 1].set_title(title_right)
+
+            # Share y axis for all subplots using control as the reference
+            vmaxes = [vmax, vmax_left, vmax_right]
+            vrefs = [v for v in vmaxes if np.isfinite(v)]
+            vrefmax = max(vrefs) if vrefs else 1
+
+            for c in (0, 1):
+                axarr[1, c].set_ylim(-0.2, vrefmax * 1.05 if vrefmax > 0 else 1)
+                if self.laser == 'blue':
+                    axarr[1, c].hlines(y=vrefmax, xmin=self.delay, xmax=self.delay + 1, linewidth=10, color='lightblue')
+                elif self.laser == 'red':
+                    axarr[1, c].hlines(y=vrefmax, xmin=self.sample, xmax=self.delay + 1, linewidth=10, color='red')
+
+            plt.tight_layout()
+
+            if len(save) != 0:
+                plt.savefig(save)
+            plt.show()
+
+
         else:
             
-            print("Both side opto plot not implemented yet!")
-            
+            # Setup titles for all three columns (Control, Left Stim, Right Stim)
+            title_control = "Neuron {}: Control".format(neuron)
+            title_left = "Neuron {}: Left stim".format(neuron)
+            title_right = "Neuron {}: Right stim".format(neuron)
+
+            # Prepare 2x3 grid, each col is: control, left stim, right stim
+            f, axarr = plt.subplots(2, 3, sharex='col', figsize=(18, 6))
+
+            ### CONTROL ###
+            counter = 0
+            for i in R_correct_trials:
+                axarr[0, 0].scatter(self.spks[neuron][0, i],
+                                    np.ones(len(self.spks[neuron][0, i])) * counter,
+                                    color='blue', s=5)
+                counter += 1
+            for i in L_correct_trials:
+                axarr[0, 0].scatter(self.spks[neuron][0, i],
+                                    np.ones(len(self.spks[neuron][0, i])) * counter,
+                                    color='red', s=5)
+                counter += 1
+
+            axarr[0, 0].axis('off')
+            L_av, time, left_err = self.get_PSTH(neuron, L_correct_trials, binsize=binsize, timestep=timestep)
+            R_av, _, right_err = self.get_PSTH(neuron, R_correct_trials, binsize=binsize, timestep=timestep)
+            vmax = max(cat([R_av, L_av]))
+            axarr[1, 0].plot(time, L_av, 'r-')
+            axarr[1, 0].plot(time, R_av, 'b-')
+            axarr[1, 0].fill_between(time, L_av - left_err, L_av + left_err, color=['#ffaeb1'])
+            axarr[1, 0].fill_between(time, R_av - right_err, R_av + right_err, color=['#b4b2dc'])
+            axarr[0, 0].axvline(self.sample, linestyle='--', color='white')
+            axarr[0, 0].axvline(self.delay, linestyle='--', color='white')
+            axarr[0, 0].axvline(self.response, linestyle='--', color='white')
+            axarr[1, 0].axvline(self.sample, linestyle='--', color='lightgrey')
+            axarr[1, 0].axvline(self.delay, linestyle='--', color='lightgrey')
+            axarr[1, 0].axvline(self.response, linestyle='--', color='lightgrey')
+            axarr[1, 0].set_ylabel('Spike rate (Hz)')
+            axarr[1, 0].set_xlabel('Time (s)')
+            axarr[0, 0].set_title(title_control)
+
+            ### LEFT STIM ###
+            # trials with stim ON & stim_side == 'L'
+            stimside_left = 'L'
+            L_opto_trials_L = self.trial_type_direction('l')
+            L_opto_trials_L = [i for i in L_opto_trials_L if self.stim_ON[i] and self.stim_side[i] == stimside_left]
+            R_opto_trials_L = self.trial_type_direction('r')
+            R_opto_trials_L = [i for i in R_opto_trials_L if self.stim_ON[i] and self.stim_side[i] == stimside_left]
+
+            counter = 0
+            for i in R_opto_trials_L:
+                axarr[0, 1].scatter(self.spks[neuron][0, i],
+                                    np.ones(len(self.spks[neuron][0, i])) * counter,
+                                    color='blue', s=5)
+                counter += 1
+            for i in L_opto_trials_L:
+                axarr[0, 1].scatter(self.spks[neuron][0, i],
+                                    np.ones(len(self.spks[neuron][0, i])) * counter,
+                                    color='red', s=5)
+                counter += 1
+
+            axarr[0, 1].axis('off')
+            L_av_L, time_L, left_err_L = self.get_PSTH(neuron, L_opto_trials_L, binsize=binsize, timestep=timestep)
+            R_av_L, _, right_err_L = self.get_PSTH(neuron, R_opto_trials_L, binsize=binsize, timestep=timestep)
+            vmax_left = max(cat([R_av_L, L_av_L]))
+            axarr[1, 1].plot(time_L, L_av_L, 'r-')
+            axarr[1, 1].plot(time_L, R_av_L, 'b-')
+            axarr[1, 1].fill_between(time_L, L_av_L - left_err_L, L_av_L + left_err_L, color=['#ffaeb1'])
+            axarr[1, 1].fill_between(time_L, R_av_L - right_err_L, R_av_L + right_err_L, color=['#b4b2dc'])
+            axarr[0, 1].axvline(self.sample, linestyle='--', color='white')
+            axarr[0, 1].axvline(self.delay, linestyle='--', color='white')
+            axarr[0, 1].axvline(self.response, linestyle='--', color='white')
+            axarr[1, 1].axvline(self.sample, linestyle='--', color='lightgrey')
+            axarr[1, 1].axvline(self.delay, linestyle='--', color='lightgrey')
+            axarr[1, 1].axvline(self.response, linestyle='--', color='lightgrey')
+            axarr[0, 1].set_title(title_left)
+
+            ### RIGHT STIM ###
+            stimside_right = 'R'
+            L_opto_trials_R = self.trial_type_direction('l')
+            L_opto_trials_R = [i for i in L_opto_trials_R if self.stim_ON[i] and self.stim_side[i] == stimside_right]
+            R_opto_trials_R = self.trial_type_direction('r')
+            R_opto_trials_R = [i for i in R_opto_trials_R if self.stim_ON[i] and self.stim_side[i] == stimside_right]
+
+            counter = 0
+            for i in R_opto_trials_R:
+                axarr[0, 2].scatter(self.spks[neuron][0, i],
+                                    np.ones(len(self.spks[neuron][0, i])) * counter,
+                                    color='blue', s=5)
+                counter += 1
+            for i in L_opto_trials_R:
+                axarr[0, 2].scatter(self.spks[neuron][0, i],
+                                    np.ones(len(self.spks[neuron][0, i])) * counter,
+                                    color='red', s=5)
+                counter += 1
+
+            axarr[0, 2].axis('off')
+            L_av_R, time_R, left_err_R = self.get_PSTH(neuron, L_opto_trials_R, binsize=binsize, timestep=timestep)
+            R_av_R, _, right_err_R = self.get_PSTH(neuron, R_opto_trials_R, binsize=binsize, timestep=timestep)
+            vmax_right = max(cat([R_av_R, L_av_R]))
+            axarr[1, 2].plot(time_R, L_av_R, 'r-')
+            axarr[1, 2].plot(time_R, R_av_R, 'b-')
+            axarr[1, 2].fill_between(time_R, L_av_R - left_err_R, L_av_R + left_err_R, color=['#ffaeb1'])
+            axarr[1, 2].fill_between(time_R, R_av_R - right_err_R, R_av_R + right_err_R, color=['#b4b2dc'])
+            axarr[0, 2].axvline(self.sample, linestyle='--', color='white')
+            axarr[0, 2].axvline(self.delay, linestyle='--', color='white')
+            axarr[0, 2].axvline(self.response, linestyle='--', color='white')
+            axarr[1, 2].axvline(self.sample, linestyle='--', color='lightgrey')
+            axarr[1, 2].axvline(self.delay, linestyle='--', color='lightgrey')
+            axarr[1, 2].axvline(self.response, linestyle='--', color='lightgrey')
+            axarr[0, 2].set_title(title_right)
+
+            # Share y axis for all subplots using control as the reference
+            vmaxes = [vmax, vmax_left, vmax_right]
+            vrefs = [v for v in vmaxes if np.isfinite(v)]
+            vrefmax = max(vrefs) if vrefs else 1
+
+            for c in (0, 1, 2):
+                axarr[1, c].set_ylim(-0.2, vrefmax * 1.05 if vrefmax > 0 else 1)
+                if self.laser == 'blue':
+                    if c > 0:  # Only for stim columns
+                        axarr[1, c].hlines(y=vrefmax, xmin=self.delay, xmax=self.delay + 1, linewidth=10, color='lightblue')
+                elif self.laser == 'red':
+                    if c > 0:  # Only for stim columns
+                        axarr[1, c].hlines(y=vrefmax, xmin=self.sample, xmax=self.delay + 1, linewidth=10, color='red')
+
+            plt.tight_layout()
+
+            if len(save) != 0:
+                plt.savefig(save)
+            plt.show()
     ## ANALYSIS FUNCTIONS 
     
     def get_epoch_selective(self, epoch, p = 0.0001,
@@ -1439,7 +1730,7 @@ class Session:
 
             
     
-    def screen_preference(self, neuron_num, epoch, bootstrap=False, samplesize = 20, 
+    def screen_preference(self, neuron_num, epoch, bootstrap=False, samplesize = 10, 
                           lickdir=False, return_remove=False):
         """Determine if a neuron is left or right preferring
                 
@@ -1502,7 +1793,7 @@ class Session:
             return choice, l_trials, r_trials
             
             
-        # Pick 20 random trials as screen for left and right
+        # Pick 20 or 10 random trials as screen for left and right
         screen_l = np.random.choice(l_trials, size = samplesize, replace = False)
         screen_r = np.random.choice(r_trials, size = samplesize, replace = False)
     
@@ -1642,7 +1933,7 @@ class Session:
             executor = ThreadPoolExecutor(max_workers=2)
             iterator = executor.map(process_neurons, neurons, epoch)
             
-            iterator = tqdm(iterator, total=len(neurons), desc="Computing selectivity")
+            # iterator = tqdm(iterator, total=len(neurons), desc="Computing selectivity")
         
             if return_pref_np:
                 for pref, nonpref in iterator:
@@ -1661,6 +1952,55 @@ class Session:
             return allpref, allnonpref, self.time
         else:
             return results, self.time
+
+
+    def get_type_selective(self, neurons, p=0.05, 
+                lickdir=True,
+                use_sample=False):
+
+        """
+        Get selective neurons based on type I, II, III cell types (see Li et al., 2015)
+        Type I: preparatory only (Sample and Delay)
+        Type II: preparatory and movement (Response)
+        Type III: movement only
+
+        Parameters
+        ----------
+        neurons : list
+            List of neurons to evaluate
+
+        Returns
+        -------
+        list
+            List of selective neurons per type I, II, III
+        """
+        type_1_neurons = []
+        type_2_neurons = []
+        type_3_neurons = []
+
+        sample_neurons = self.get_epoch_selective((self.sample, self.delay), p=p, lickdir=lickdir)
+        delay_neurons = self.get_epoch_selective((self.delay+1.5, self.response), p=p, lickdir=lickdir)
+        response_neurons = self.get_epoch_selective((self.response, self.response + 1.5), p=p, lickdir=lickdir)
+        if use_sample:
+            for n in neurons:
+                if (n in sample_neurons or n in delay_neurons) and n not in response_neurons:
+                    type_1_neurons.append(n)
+                elif n in response_neurons and n not in sample_neurons and n not in delay_neurons:
+                    type_3_neurons.append(n)
+                elif (n in sample_neurons or n in delay_neurons) and n in response_neurons:
+                    type_2_neurons.append(n)
+
+        else:
+            for n in neurons:
+                if n in delay_neurons and n not in response_neurons:
+                    type_1_neurons.append(n)
+                elif n in response_neurons and n not in delay_neurons:
+                    type_3_neurons.append(n)
+                elif n in delay_neurons and n in response_neurons:
+                    type_2_neurons.append(n)
+
+
+        return type_1_neurons, type_2_neurons, type_3_neurons
 
 
     
@@ -1695,7 +2035,8 @@ class Session:
             epoch = (self.response-1.5, self.response) # Late delay
         
         # Late delay selective neurons
-        delay_neurons = self.get_epoch_selective(epoch, p=p)
+        delay_neurons = self.get_epoch_selective(epoch, p=p)#, lickdir=True) # use lickdir ?
+
         if len(delay_neurons) == 0: # No selective neurons
             print('No selective neurons')
             return None, None
@@ -2029,9 +2370,10 @@ class Session:
             
             
   
-    ## OLD EPHYS PLOTS UNEDITED
+
     
-    def plot_number_of_sig_neurons(self, window = 200, p=0.01, return_nums=False, save=False, y_axis = []):
+    def plot_number_of_sig_neurons(self, window = 200, p=0.01, return_nums=False, save=False, 
+                                    y_axis = [], plot=True, lickdir=False, trialtype=False):
         
         """Plots number of contra / ipsi neurons over course of trial
                                 
@@ -2054,14 +2396,20 @@ class Session:
         contra = np.zeros(len(steps))
         ipsi = np.zeros(len(steps))
 
+        L_correct_trials = self.lick_correct_direction('l') if not lickdir else self.lick_actual_direction('l')
+        L_correct_trials = [i for i in L_correct_trials if not self.stim_ON[i] ]#and i in stable_trials]
+        R_correct_trials = self.lick_correct_direction('r') if not lickdir else self.lick_actual_direction('r')
+        R_correct_trials = [i for i in R_correct_trials if not self.stim_ON[i] ]#and i in stable_trials]
+
+        if trialtype:
+            R_correct_trials=self.trial_type_direction('r') 
+            L_correct_trials=self.trial_type_direction('l') 
+
         for n in self.good_neurons:
             
             stable_trials = self.stable_trials[n]
             
-            L_correct_trials = self.lick_correct_direction('l')
-            L_correct_trials = [i for i in L_correct_trials if not self.stim_ON[i] and i in stable_trials]
-            R_correct_trials = self.lick_correct_direction('r')
-            R_correct_trials = [i for i in R_correct_trials if not self.stim_ON[i] and i in stable_trials]
+
             
             for t in steps:
                 
@@ -2071,6 +2419,7 @@ class Session:
                 t_val, p = stats.ttest_ind(r, l)
                 p = p < p_value
                 
+
                 if self.unit_side[n] == 'L':
                     if t_val > 0: # R > L
                         contra[t] += p
@@ -2085,25 +2434,28 @@ class Session:
         
         if return_nums:
             return contra, ipsi
+        if plot:
+            plt.bar(x, contra, color = 'b', edgecolor = 'white', width = window/1000, label = 'contra')
+            plt.bar(x, -ipsi, color = 'r',edgecolor = 'white', width = window/1000, label = 'ipsi')
+            plt.axvline(self.sample, ls = '--', color='grey')
+            plt.axvline(self.delay, ls = '--', color='grey')
+            plt.axvline(self.response, ls = '--', color='grey')
 
-        plt.bar(x, contra, color = 'b', edgecolor = 'white', width = window/1000, label = 'contra')
-        plt.bar(x, -ipsi, color = 'r',edgecolor = 'white', width = window/1000, label = 'ipsi')
-        plt.axvline(self.sample, ls = '--', color='grey')
-        plt.axvline(self.delay, ls = '--', color='grey')
-        plt.axvline(self.response, ls = '--', color='grey')
+            if len(y_axis) != 0:
+                plt.ylim(bottom = y_axis[0])
+                plt.ylim(top = y_axis[1])
+            plt.ylabel('Number of sig sel neurons')
+            plt.xlabel('Time from Go cue (s)')
+            plt.legend()
+            plt.title('{} ALM neurons'.format(self.side))
+            
+            if save:
+                plt.savefig(self.path + r'number_sig_neurons.pdf')
+            
+            plt.show()
 
-        if len(y_axis) != 0:
-            plt.ylim(bottom = y_axis[0])
-            plt.ylim(top = y_axis[1])
-        plt.ylabel('Number of sig sel neurons')
-        plt.xlabel('Time from Go cue (s)')
-        plt.legend()
-        plt.title('{} ALM neurons'.format(self.side))
-        
-        if save:
-            plt.savefig(self.path + r'number_sig_neurons.pdf')
-        
-        plt.show()
+
+    ## OLD IMAGING PLOTS UNEDITED
         
     def selectivity_table_by_epoch(self, save=False):
         """Plots table of L/R traces of selective neurons over three epochs and contra/ipsi population proportions

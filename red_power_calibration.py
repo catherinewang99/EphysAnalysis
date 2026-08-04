@@ -281,7 +281,7 @@ plt.show()
 
 
 #%% Look at rasters of significantly excited/inhibited units
-n=neuron_cell_type[75]
+n=neuron_cell_type[9]
 
 for stim_level in s1.all_stim_levels: 
 # for stim_level in [s1.all_stim_levels[-1]]:

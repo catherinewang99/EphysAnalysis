@@ -31,11 +31,14 @@ path = r'G:\ephys_data\CW63\python\2025_03_21'
 path = r'J:\ephys_data\CW53\python\2025_01_31'
 # path = r'G:\ephys_data\CW59\python\2025_02_27'
 path = r'L:\data\CW60\python\2025_06_29'
+path = r'M:\data\CW80\python\2026_04_05'
+path = r'M:\data\CW91\python\2026_05_06'
 
 passive=False
 s1 = Session(path, passive=passive, filter_low_perf=False, filter_by_stim=False, laser = 'red')
 
 window = (0.57, 0.57+1.3) if passive else (0.57, 0.57+2.3) 
+window = (0.57, 0.57+1.3) if passive else (0.57, 0.57+1.7) 
 
 
 stim_trials = np.where(s1.stim_level > 2)[0]
@@ -71,14 +74,18 @@ path = r'G:\ephys_data\CW63\python\2025_03_21'
 # path = r'G:\ephys_data\CW61\python\2025_03_12'
 path = r'J:\ephys_data\CW53\python\2025_01_31'
 path = r'G:\ephys_data\CW59\python\2025_02_27'
+path = r'M:\data\CW91\python\2026_05_06'
+
 passive=False
 
 s1 = Session(path, passive=passive, filter_low_perf=False, filter_by_stim=False, laser = 'red', only_ppyr=False)
 
 window = (0.57, 0.57+1.3) if passive else (0.57, 0.57+2.3) 
-window = (0.57, 0.57+0.1)
+window = (0.57, 0.57+1.3) if passive else (0.57, 0.57+2.3) 
 
-stim_trials = np.where(s1.stim_level == 2.7)[0]
+# window = (0.57, 0.57+0.1)
+
+stim_trials = np.where(s1.stim_level >0.5)[0]
 control_trials = np.where(s1.stim_level == 0)[0]
 
 L_alm_fs = [n for n in s1.L_alm_idx if s1.celltype[n] == 1]
@@ -112,7 +119,7 @@ l_info = np.array([frac_supr, frac_exc, frac_none]) / len(L_alm_fs)
 
 
 
-stim_trials = np.where(s1.stim_level == 2.7)[0]
+stim_trials = np.where(s1.stim_level >0.5)[0]
 control_trials = np.where(s1.stim_level == 0)[0]
 sided_neurons = L_alm_fs
 
@@ -167,19 +174,20 @@ path = r'G:\ephys_data\CW63\python\2025_03_21'
 path = r'J:\ephys_data\CW53\python\2025_01_31'
 # path = r'G:\ephys_data\CW59\python\2025_02_27'
 path = r'L:\data\CW60\python\2025_06_29'
+path = r'M:\data\CW91\python\2026_05_06'
 
 passive=False
 s1 = Session(path, passive=passive, filter_low_perf=False, filter_by_stim=False, laser = 'red')
 
 
-stim_trials = np.where(s1.stim_level > 2)[0]
-control_trials = np.where(s1.stim_level < 2)[0]
+stim_trials = np.where(s1.stim_level > 0.5)[0]
+control_trials = np.where(s1.stim_level < 0.5)[0]
 sided_neurons = s1.R_alm_idx
 
 # Plot control vs stim scatter
     
 window = (0.57, 0.57+1.3) if passive else (0.57, 0.57+2.3) 
-# window = (0.57, 0.57+2.3) # Behavior
+window = (0.57, 0.57+1.7) # Behavior
 stim_spk, ctl_spk = [],[]
 middle_neurons, pint = [], []
 norm_rate = []
@@ -366,10 +374,17 @@ for i in range(4):
 path = r'J:\ephys_data\CW53\python\2025_01_31'
 # path = r'G:\ephys_data\CW59\python\2025_02_27'
 path = r'L:\data\CW60\python\2025_06_29'
+path = r'M:\data\CW80\python\2026_04_05'
+path = r'M:\data\CW91\python\2026_05_06'
+
 s1 = Session(path, passive=False, filter_low_perf=True, filter_by_stim=False, laser='red')
-left_info, right_info = s1.selectivity_optogenetics(epoch = (s1.delay , s1.response),
-                                                    p=0.05                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         , 
-                                                    binsize=150, 
+
+s1.delay = 1.3 + 0.57
+s1.response = 1.3 + 0.57 + 1.7
+
+left_info, right_info = s1.selectivity_optogenetics(epoch = (s1.sample , s1.delay),
+                                                    p=0.05, 
+                                                    binsize=250, 
                                                     timestep=50,
                                                     bootstrap=False)
 sel, selo_stimleft, selo_stimright, err, erro_stimleft, erro_stimright, time = left_info
@@ -403,7 +418,7 @@ axarr[1].plot(time, selo_stimleft_R, 'red')
 axarr[1].fill_between(time, selo_stimleft_R - erro_stimleft_R, 
           selo_stimleft_R + erro_stimleft_R,
           color=['pink'])       
-axarr[1].hlines(y=max(cat((selo_stimleft_R, sel_R))), xmin=s1.sample, xmax=s1.delay+1, linewidth=10, color='red')
+axarr[1].hlines(y=max(cat((selo_stimleft_R, sel_R))), xmin=s1.sample, xmax=s1.delay+0.5, linewidth=10, color='red')
 
 
 for i in range(2):

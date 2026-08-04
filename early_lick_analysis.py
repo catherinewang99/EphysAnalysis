@@ -14,6 +14,8 @@ Investigate if there is an early lick cd that predicts the final cd over learnin
 @author: catherinewang
 """
 
+#%% 
+
 import sys
 sys.path.append("C:\scripts\Imaging analysis")
 import numpy as np
@@ -85,14 +87,361 @@ all_expert_paths = [[
                      r'G:\ephys_data\CW59\python\2025_02_26',
                      r'G:\ephys_data\CW59\python\2025_02_28',
                      ]]
+naive_paths = [[
+                # r'J:\ephys_data\CW48\python\2024_10_29',
+                # r'J:\ephys_data\CW48\python\2024_10_30',
+                r'J:\ephys_data\CW48\python\2024_10_31',
+                r'J:\ephys_data\CW48\python\2024_11_01',
+                r'J:\ephys_data\CW48\python\2024_11_02',
+                r'J:\ephys_data\CW48\python\2024_11_03',
+                r'J:\ephys_data\CW48\python\2024_11_04',
+                r'J:\ephys_data\CW48\python\2024_11_05',
+                r'J:\ephys_data\CW48\python\2024_11_06',
+                
+                r'H:\ephys_data\CW47\python\2024_10_21',
+                r'H:\ephys_data\CW47\python\2024_10_20']]
+
+#%% Naive ephys early lick analysis, project choice CD onto early lick trials
 
 
-#%% early lick behavior analysis
+path = r'G:\ephys_data\CW59\python\2025_02_26'
+path = r'J:\ephys_data\CW48\python\2024_10_29'
+# path =  r'L:\data\CW68\python\2025_12_10'
+# path =  r'L:\data\CW70\python\2025_11_04'
+# path = r'G:\ephys_data\CW65\python\2025_02_25'
+# path = r'H:\ephys_data\CW47\python\2024_10_22'
+
+s1 = Mode(path, side='L',filter_low_perf=False, filter_by_stim=False)
+
+cd_choice, _ = s1.plot_CD(mode_input='choice')
+
+early_lick_trials = np.where(s1.early_lick)[0]
+early_lick_side = [i[0] for i in s1.early_lick_side] # use first lick as direction
+early_lick_time = [i[0][0] for i in s1.early_lick_time]
+# for now keep all the early licks (even in ITI)
+drop_idx = [i for i in range(len(early_lick_time)) if np.abs(0.57-early_lick_time[i]) < 0.2]
+# drop_idx = [i for i in range(len(early_lick_time)) if np.abs(1.2-early_lick_time[i]) > 0.2]
+drop_idx = [i for i in range(len(early_lick_time))]
+early_lick_trials = np.array(early_lick_trials)[drop_idx]
+early_lick_side = np.array(early_lick_side)[drop_idx]
+early_lick_time = np.array(early_lick_time)[drop_idx]
+
+
+early_lick_left, early_lick_right = [],[] #collect idx of el sides
+# for i in range(len(s1.early_lick_side)):
+for i in range(len(early_lick_side)):
+    if early_lick_side[i] == 'l':
+        early_lick_left += [i]
+    else:
+        early_lick_right += [i]
+early_lick_left = [i for i in early_lick_left if early_lick_trials[i] in s1.i_good_trials]
+early_lick_right = [i for i in early_lick_right if early_lick_trials[i] in s1.i_good_trials]
+time = s1.t
+
+
+
+
+
+# single trial view
+f=plt.figure()
+
+left_proj = []
+for t in early_lick_left:
+    time_adj = time[np.where(time<early_lick_time[t])]
+    if len(time_adj) == 0:
+        continue
+    
+    trial = early_lick_trials[t]
+    activity, _, _ = s1.get_PSTH_multiple(s1.good_neurons, [trial], binsize=s1.binsize, timestep = s1.timestep)
+
+    # activity = activity - np.tile(np.mean(activityRL_train, axis=1)[:, None], (1, activity.shape[1]))
+    proj_allDim = np.dot(activity.T, cd_choice)
+    # proj_allDimR += [proj_allDim]
+    left_proj += [proj_allDim[:len(time_adj)]]
+    plt.plot(time_adj - time_adj[-1], proj_allDim[:len(time_adj)], 'r', alpha = 0.5,  linewidth = 0.5)
+
+
+right_proj=[]
+for t in early_lick_right:
+    time_adj = time[np.where(time<early_lick_time[t])]
+    if len(time_adj) == 0:
+       continue
+    
+    trial = early_lick_trials[t]
+    activity, _, _ = s1.get_PSTH_multiple(s1.good_neurons, [trial], binsize=s1.binsize, timestep = s1.timestep)
+
+    # activity = activity - np.tile(np.mean(activityRL_train, axis=1)[:, None], (1, activity.shape[1]))
+    proj_allDim = np.dot(activity.T, cd_choice)
+    # proj_allDimR += [proj_allDim]
+    right_proj += [proj_allDim[:len(time_adj)]]
+    plt.plot(time_adj - time_adj[-1], proj_allDim[:len(time_adj)], 'b', alpha = 0.5,  linewidth = 0.5)
+    
+plt.xlabel('Time before lick (s)')
+plt.ylabel('CD choice projections')
+plt.show()
+
+# population average view
+#average if there an item
+max_len = max(len(lst) for lst in left_proj)
+time_left = time[:max_len] - time[max_len]
+avg_left,std_left = [], []
+for idx in range(1,max_len+1):
+    
+    vals = [i[-idx, 0] for i in left_proj if len(i)>idx]
+    avg_left += [np.mean(vals)]
+    std_left += [np.std(vals) / np.sqrt(len(vals))]
+avg_left.reverse()
+std_left.reverse()
+max_len = max(len(lst) for lst in right_proj)
+time_right = time[:max_len] - time[max_len]
+avg_right,std_right = [],[]
+for idx in range(1,max_len+1):
+    
+    vals = [i[-idx, 0] for i in right_proj if len(i)>idx]
+    avg_right += [np.mean(vals)]
+    std_right += [np.std(vals) / np.sqrt(len(vals))]
+
+avg_right.reverse()
+std_right.reverse()
+
+f = plt.figure()
+plt.plot(time_right, avg_right, color='b')
+plt.plot(time_left, avg_left, color='r')
+plt.fill_between(time_left, np.array(avg_left) - np.array(std_left), 
+         np.array(avg_left) + np.array(std_left),
+         color=['#ffaeb1'])
+plt.fill_between(time_right, np.array(avg_right) - np.array(std_right), 
+         np.array(avg_right) + np.array(std_right),
+         color=['#b4b2dc'])
+
+plt.xlabel('Time before lick (s)')
+plt.ylabel('CD choice projections')
+plt.show()
+
+
+ # calculate early lick cd
+
+
+early_lick_trials = np.where(s1.early_lick)[0]
+early_lick_left, early_lick_right = [],[] #collect idx of el sides
+for i in range(len(s1.early_lick_side)):
+    if s1.early_lick_side[i][0] == 'l':
+        early_lick_left += [i]
+    else:
+        early_lick_right += [i]
+early_lick_left = [i for i in early_lick_left if early_lick_trials[i] in s1.i_good_trials]
+early_lick_right = [i for i in early_lick_right if early_lick_trials[i] in s1.i_good_trials]
+time = s1.t
+
+
+
+
+
+#%% Calculate early lick CD for ephys data:
+    
+path = r'J:\ephys_data\CW48\python\2024_10_29'
+# path = r'H:\ephys_data\CW47\python\2024_10_25'
+# path = r'G:\ephys_data\CW62\python\2025_06_24'
+
+    
+s2 = Mode(path, side='l', filter_low_perf=False, filter_by_stim=False)
+
+# calculate early lick CD in naive sessions - define here
+
+early_lick_trials = np.where(s2.early_lick)[0]
+early_lick_side = [i[0] for i in s2.early_lick_side] # use first lick as direction
+early_lick_time = [i[0][0] for i in s2.early_lick_time]
+
+# for now keep all the early licks (even in ITI)
+drop_idx = [i for i in range(len(early_lick_time)) if early_lick_time[i] > 0.2]
+early_lick_trials = np.array(early_lick_trials)[drop_idx]
+early_lick_side = np.array(early_lick_side)[drop_idx]
+early_lick_time = np.array(early_lick_time)[drop_idx]
+#i good filtering
+drop_idx = [i for i in range(len(early_lick_trials)) if early_lick_trials[i] in s2.i_good_trials]
+early_lick_trials = np.array(early_lick_trials)[drop_idx]
+early_lick_side = np.array(early_lick_side)[drop_idx]
+early_lick_time = np.array(early_lick_time)[drop_idx]
+
+# project early lick CD
+r_trials = early_lick_trials[np.where(early_lick_side == 'r')[0]]
+l_trials = early_lick_trials[np.where(early_lick_side == 'l')[0]]
+
+r_trial_lick = early_lick_time[np.where(early_lick_side == 'r')[0]]
+l_trial_lick = early_lick_time[np.where(early_lick_side == 'l')[0]]
+# Get the frame where the early lick happened, per trial
+
+# Align every trial to shortest early lick (new go cue time)
+r_cue, l_cue = min(r_trial_lick), min(l_trial_lick)
+r_end, l_end = max(r_trial_lick), max(l_trial_lick)
+
+
+# get the train vs test indices
+all_r_idx, all_l_idx = np.arange(len(r_trials)), np.arange(len(l_trials))
+rtmp = np.random.permutation(len(all_r_idx))
+ltmp = np.random.permutation(len(all_l_idx))
+train_r_idx, test_r_idx = rtmp[:int(len(rtmp)/2)], rtmp[int(len(rtmp)/2):]
+train_l_idx, test_l_idx = ltmp[:int(len(ltmp)/2)], ltmp[int(len(ltmp)/2):]
+
+# compile train vs test psths
+PSTH_yes_correct, PSTH_no_correct = [], []
+PSTH_yes_correct_test, PSTH_no_correct_test = [], []
+PSTH_yes_correct_test_mean, PSTH_no_correct_test_mean = [], []
+
+# Ephys code
+# go per trial in the train set to new 'go' cue
+r_train = []
+for idx in train_r_idx:
+    tmp, time, _ = s2.get_PSTH_multiple(s2.good_neurons, r_trials[idx], binsize=s2.binsize, timestep = s2.timestep)
+    lickidx = np.where(time > r_trial_lick[idx])[0][0]
+    r_cue_idx = np.where(time > r_cue)[0][0]
+    cutoff = len(time)
+    r_end_idx = np.where(time > r_end)[0][0]
+    
+    
+    tmp = tmp[:, (lickidx - r_cue_idx):]
+    tmp = tmp[:, : (cutoff - (r_end_idx - r_cue_idx))]
+    
+    
+    print(tmp.shape)
+    tmp = np.expand_dims(tmp, axis=-1)
+    if len(r_train) == 0:
+        r_train = tmp
+    else:
+        r_train = np.concatenate((r_train, tmp), axis=-1)
+        
+        
+l_train = []
+for idx in train_l_idx:
+    tmp, time, _ = s2.get_PSTH_multiple(s2.good_neurons, l_trials[idx], binsize=s2.binsize, timestep = s2.timestep)
+    lickidx = np.where(time > l_trial_lick[idx])[0][0]
+    l_cue_idx = np.where(time > l_cue)[0][0]
+    cutoff = len(time)
+    l_end_idx = np.where(time > l_end)[0][0]
+    
+    
+    tmp = tmp[:, (lickidx - l_cue_idx):]
+    tmp = tmp[:, : (cutoff - (l_end_idx - l_cue_idx))]
+    
+    tmp = np.expand_dims(tmp, axis=-1)
+    if len(l_train) == 0:
+        l_train = tmp
+    else:
+        l_train = np.concatenate((l_train, tmp), axis=-1)      
+
+
+r_train = np.mean(r_train, axis=-1)
+l_train = np.mean(l_train, axis=-1)
+
+i_t_r = range(r_cue_idx - 120, r_cue_idx+50) # use 12 time steps before lick and 3 after lick
+i_t_l = range(l_cue_idx - 120, l_cue_idx+50)
+
+wt = (r_train[:, i_t_r] - l_train[:, i_t_l]) / 2
+CD_early_lick = np.mean(wt, axis=1)
+
+
+
+proj_allDimR = []
+for idx in test_r_idx:
+    tmp, time, _ = s2.get_PSTH_multiple(s2.good_neurons, r_trials[idx], binsize=s2.binsize, timestep = s2.timestep)
+    lickidx = np.where(time > r_trial_lick[idx])[0][0]
+    r_cue_idx = np.where(time > r_cue)[0][0]
+    cutoff = len(time)
+    r_end_idx = np.where(time > r_end)[0][0]
+    
+    
+    tmp = tmp[:, (lickidx - r_cue_idx):]
+    tmp = tmp[:, : (cutoff - (r_end_idx - r_cue_idx))]
+    time_crop = time[(lickidx - r_cue_idx):]
+    time_crop = time_crop[: (cutoff - (r_end_idx - r_cue_idx))]
+        
+    proj_allDim = np.dot(tmp.T, CD_early_lick)
+    proj_allDimR += [proj_allDim]
+    plt.plot(time_crop, proj_allDim, 'b', alpha = 0.5, linewidth=0.5)
+    
+proj_allDimL = []
+for idx in test_l_idx:
+    tmp, time, _ = s2.get_PSTH_multiple(s2.good_neurons, l_trials[idx], binsize=s2.binsize, timestep = s2.timestep)
+    lickidx = np.where(time > l_trial_lick[idx])[0][0]
+    l_cue_idx = np.where(time > l_cue)[0][0]
+    cutoff = len(time)
+    l_end_idx = np.where(time > l_end)[0][0]
+    
+    
+    tmp = tmp[:, (lickidx - l_cue_idx):]
+    tmp = tmp[:, : (cutoff - (l_end_idx - l_cue_idx))]
+    time_crop = time[(lickidx - l_cue_idx):]
+    time_crop = time_crop[: (cutoff - (l_end_idx - l_cue_idx))]
+
+    proj_allDim = np.dot(tmp.T, CD_early_lick)
+    proj_allDimL += [proj_allDim]
+    plt.plot(time_crop, proj_allDim, 'r', alpha = 0.5, linewidth=0.5)
+      
+        
+
+plt.title("Applied decoder projections")
+
+plt.ylabel('Applied projection (a.u.)')
+
+    
+plt.show()
+
+
+
+# population average view
+#average if there an item
+max_len = max(len(lst) for lst in proj_allDimL)
+time_left = time[:max_len] - time[max_len]
+avg_left,std_left = [], []
+for idx in range(1,max_len+1):
+    
+    vals = [i[-idx] for i in proj_allDimL if len(i)>idx]
+    avg_left += [np.mean(vals)]
+    std_left += [np.std(vals) / np.sqrt(len(vals))]
+    
+avg_left.reverse()
+std_left.reverse()
+
+max_len = max(len(lst) for lst in proj_allDimR)
+time_right = time[:max_len] - time[max_len]
+avg_right,std_right = [],[]
+for idx in range(1,max_len+1):
+    
+    vals = [i[-idx] for i in proj_allDimR if len(i)>idx]
+    avg_right += [np.mean(vals)]
+    std_right += [np.std(vals) / np.sqrt(len(vals))]
+
+avg_right.reverse()
+std_right.reverse()
+
+f = plt.figure()
+plt.plot(time_right, avg_right, color='b')
+plt.plot(time_left, avg_left, color='r')
+plt.fill_between(time_left, np.array(avg_left) - np.array(std_left), 
+         np.array(avg_left) + np.array(std_left),
+         color=['#ffaeb1'])
+plt.fill_between(time_right, np.array(avg_right) - np.array(std_right), 
+         np.array(avg_right) + np.array(std_right),
+         color=['#b4b2dc'])
+
+plt.xlabel('Time before lick (s)')
+plt.ylabel('CD choice projections')
+plt.show()
+        
+
+
+    
+    
+
+#%% early lick behavior analysis thalm corruption mice e.g.
 
 path = r'G:\ephys_data\CW59\python\2025_02_26'
 path = r'G:\ephys_data\CW62\python\2025_06_24'
+path = r'J:\ephys_data\CW48\python\2024_10_31'
+path = r'H:\ephys_data\CW47\python\2024_10_20'
+path = r'G:\ephys_data\CW65\python\2025_02_25'
 
-s1 = Session(path, passive=False)
+s1 = Session(path, passive=False, filter_low_perf=False)
 
 # Vanilla raster plot
 f=plt.figure(figsize=(5,5))

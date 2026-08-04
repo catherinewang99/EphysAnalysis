@@ -307,7 +307,142 @@ axarr[0].legend()
 
 #%% Make figure s1E for right vs left alm ppyr sample selectivity, per FOV
 
+allpaths = [
+            [ r'K:\data\CW69\python\2025_12_19',
+              ],
+            [r'L:\data\CW68\python\2025_12_10',
+              r'L:\data\CW68\python\2025_12_12',
+              r'L:\data\CW68\python\2025_12_13',
+              r'L:\data\CW68\python\2025_12_15',
+              ],
+            # [r'L:\data\CW70\python\2025_11_04',
 
+            #  ],
+            [r'G:\ephys_data\CW65\python\2025_02_25',
+              ],
+            [r'H:\ephys_data\CW47\python\2024_10_17',
+              r'H:\ephys_data\CW47\python\2024_10_22',
+              r'H:\ephys_data\CW47\python\2024_10_25',
+              ],
+            [r'K:\data\CW85\python\2026_02_07',
+              r'K:\data\CW85\python\2026_02_10',
+             
+              ],
+            [r'M:\data\CW87\python\2026_02_20',
+              r'M:\data\CW87\python\2026_02_21',
+              ],
+            [r'K:\data\CW84\python\2026_03_11',
+             r'K:\data\CW84\python\2026_03_14',
+             r'K:\data\CW84\python\2026_03_15',
+             r'K:\data\CW84\python\2026_03_16',
+             r'K:\data\CW84\python\2026_03_17',
+             r'K:\data\CW84\python\2026_03_18',
+             r'K:\data\CW84\python\2026_03_19',
+             r'K:\data\CW84\python\2026_03_20',
+             ],
+            ]
+
+path = r'K:\data\CW84\python\2026_03_15'
+left_sel, right_sel = [],[]
+for path in cat(allpaths):
+    s1 = Session(path, passive=False, side='L', anterior_shank=False)
+    
+    p=0.05/len(s1.good_neurons)
+    p=0.05
+    all_neurons = s1.get_epoch_selective(epoch=(s1.sample, s1.delay), p=p)
+    epochs = [(s1.sample, s1.delay) for _ in range(len(all_neurons))]
+    # epochs = [(s1.delay, s1.response) for _ in range(len(all_neurons))]
+    sel, time = s1.plot_selectivity(all_neurons, binsize=200, timestep=50, return_pref_np=False, epoch=epochs)
+    sample_idx = np.where((time < s1.delay) & (time > s1.sample))
+    sample_idx = np.where((time < s1.response) & (time > s1.delay))
+    lsel = np.mean(np.array(sel)[:, sample_idx])
+    left_sel += [lsel]
+    
+    s1 = Session(path, passive=False, side='R', anterior_shank=False)
+    all_neurons = s1.get_epoch_selective(epoch=(s1.sample, s1.delay), p=p)
+    epochs = [(s1.sample, s1.delay) for _ in range(len(all_neurons))]
+    # epochs = [(s1.delay, s1.response) for _ in range(len(all_neurons))]
+
+    sel, time = s1.plot_selectivity(all_neurons, binsize=200, timestep=50, return_pref_np=False, epoch=epochs)
+    sample_idx = np.where((time < s1.delay) & (time > s1.sample))
+    sample_idx = np.where((time < s1.response) & (time > s1.delay))
+
+    rsel = np.mean(np.array(sel)[:, sample_idx])
+    right_sel += [rsel]
+
+
+#%% Corruption data points: (goes with above cell)
+    
+corr_paths = [[r'G:\ephys_data\CW59\python\2025_02_22',
+  r'G:\ephys_data\CW59\python\2025_02_24',
+  r'G:\ephys_data\CW59\python\2025_02_25',
+  r'G:\ephys_data\CW59\python\2025_02_26',
+  r'G:\ephys_data\CW59\python\2025_02_28',
+  
+  ],
+              [
+                   r'J:\ephys_data\CW53\python\2025_01_27',
+                   r'J:\ephys_data\CW53\python\2025_01_28',
+                   r'J:\ephys_data\CW53\python\2025_01_29',
+                   # r'J:\ephys_data\CW53\python\2025_01_30',
+                   r'J:\ephys_data\CW53\python\2025_02_01',
+                   r'J:\ephys_data\CW53\python\2025_02_02',
+                     ],
+              
+              [r'M:\data\CW80\python\2026_04_03',
+               r'M:\data\CW80\python\2026_04_04',
+               r'M:\data\CW80\python\2026_04_01',
+               r'M:\data\CW80\python\2026_04_02',
+               r'M:\data\CW80\python\2026_04_06',
+                  ],
+              
+              [r'M:\data\CW75\python\2026_03_03',
+               r'M:\data\CW75\python\2026_03_04',
+                  ],
+              
+              ]
+all_corr_left_sel, all_corr_right_sel = [],[]
+
+for paths in corr_paths:
+    corr_left_sel, corr_right_sel = [],[]
+    for path in paths:
+        s1 = Session(path, passive=False, side='L', anterior_shank=False)
+        
+        p=0.05/len(s1.good_neurons)
+        p=0.05
+        all_neurons = s1.get_epoch_selective(epoch=(s1.sample, s1.delay), p=p)
+        epochs = [(s1.sample, s1.delay) for _ in range(len(all_neurons))]
+        sel, time = s1.plot_selectivity(all_neurons, binsize=200, timestep=50, return_pref_np=False, epoch=epochs)
+        sample_idx = np.where((time < s1.delay) & (time > s1.sample))
+        sample_idx = np.where((time < s1.response) & (time > s1.delay))
+
+        lsel = np.mean(np.array(sel)[:, sample_idx])
+        corr_left_sel += [lsel]
+        
+        s1 = Session(path, passive=False, side='R', anterior_shank=False)
+        all_neurons = s1.get_epoch_selective(epoch=(s1.sample, s1.delay), p=p)
+        epochs = [(s1.sample, s1.delay) for _ in range(len(all_neurons))]
+        sel, time = s1.plot_selectivity(all_neurons, binsize=200, timestep=50, return_pref_np=False, epoch=epochs)
+        sample_idx = np.where((time < s1.delay) & (time > s1.sample))
+        sample_idx = np.where((time < s1.response) & (time > s1.delay))
+
+        rsel = np.mean(np.array(sel)[:, sample_idx])
+        corr_right_sel += [rsel]
+    
+
+    all_corr_left_sel += [corr_left_sel]
+    all_corr_right_sel += [corr_right_sel]
+
+
+# plot
+plt.scatter(left_sel, right_sel, color = 'grey')
+for i in range(len(all_corr_left_sel)):
+    plt.scatter(all_corr_left_sel[i], all_corr_right_sel[i], label='Mouse {}'.format(i+1))
+# plt.scatter(uncorr_left_sel, uncorr_right_sel, color = 'green', label='non-reversed')
+plt.plot([0,4],[0,4],ls='--',color='black')
+plt.xlabel('Left ALM (spikes/s)')
+plt.ylabel('Right ALM (spikes/s)')
+plt.legend()
 
 
 #%% Is sample selectivity stronger or effect of stim?

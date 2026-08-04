@@ -2,9 +2,10 @@ addpath('H:\data')
 addpath('./func/')
 
 path = 'H:\ephys_data\CW47\';
-path = 'G:\ephys_data\CW62\';
-% path = 'J:\ephys_data\CW49\';
-path = 'L:\data\CW70\';
+path = 'G:\ephys_data\CW65\';
+% path = 'J:\ephys_data\CW48\';
+path = 'P:\data\CW92\';
+path = 'N:\data\CW98\';
 
 mkdir([path 'python'])
 
@@ -36,7 +37,7 @@ for j = 1:length(lst)
 
             units{i} = trials; % Add all trial sorted spikes to unit
             imec(i) = str2double(obj.units{1, i}.imec); % include L/R ALM info
-            shank(i) = obj.units{1, i}.shank_info; % include shank number
+%             shank(i) = obj.units{1, i}.shank_info; % include shank number
             [celltype(i), spikewidth(i)] = func_get_cell_type_kilosort(obj.units{1, i}.mean_waveform); % cell type info
             mean_waveform{i} = obj.units{1, i}.mean_waveform; % mean waveform
             stabletrials{i} = obj.units{1, i}.stable_trials; % add stable trials
@@ -99,6 +100,9 @@ for j = 1:length(lst)
         % Stim information
 
         total_trials = obj.trials.trialNums;
+        if length(obj.trials.trialNums) > 1
+            total_trials = sum(obj.trials.trialNums);
+        end
         for i_solo_trial = 1:total_trials
     
             % get AOM and Galvo info from wavesurfer
