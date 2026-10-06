@@ -4,8 +4,8 @@ addpath('./func/')
 path = 'H:\ephys_data\CW47\';
 path = 'G:\ephys_data\CW65\';
 % path = 'J:\ephys_data\CW48\';
-path = 'P:\data\CW92\';
-path = 'N:\data\CW98\';
+path = 'P:\data\CW104\';
+% path = 'N:\data\CW100\';
 
 mkdir([path 'python'])
 
@@ -105,55 +105,60 @@ for j = 1:length(lst)
         end
         for i_solo_trial = 1:total_trials
     
-            % get AOM and Galvo info from wavesurfer
-            if size(obj.wavesurfer.timestamp,1)>=i_solo_trial
-                wave_time_tmp = obj.wavesurfer.timestamp(i_solo_trial,:);
-                wave_aom_tmp = obj.wavesurfer.aom_input_trace(i_solo_trial,:);
-                wave_xGalvo_tmp = obj.wavesurfer.xGalvo_trace(i_solo_trial,:);
-                wave_yGalvo_tmp = obj.wavesurfer.yGalvo_trace(i_solo_trial,:);
-            else
-                wave_time_tmp = 0;
-                wave_aom_tmp = 0;
-                wave_xGalvo_tmp = 0;
-                wave_yGalvo_tmp = 0;
-            end
-            
-            
-            % laser attributes
-            AOM_input_tmp = round(max(wave_aom_tmp)*10)/10;
-            AOM_data_tmp(i_solo_trial,:) = AOM_input_tmp;
-            
-            if AOM_input_tmp>0
-                i_laser_on = find(wave_aom_tmp>.05);
-                t_laser_on = wave_time_tmp(i_laser_on(1));
-                t_laser_off = wave_time_tmp(i_laser_on(end));
-                
-                StimDur_tmp(i_solo_trial,:) = round((t_laser_off-t_laser_on)*10)/10;
-                StimOnTime_tmp(i_solo_trial,:) = t_laser_on;
-                StimLevel(i_solo_trial,:) = AOM_input_tmp;
-            else
-                StimDur_tmp(i_solo_trial,:) = 0;
-                StimOnTime_tmp(i_solo_trial,:) = 0;
-                StimLevel(i_solo_trial,:) = 0;
-
-            end
-            
-            % Galvo x info
-
-            if max(wave_xGalvo_tmp) < 0.1
-                xGalvo(i_solo_trial,:) = min(wave_xGalvo_tmp);
-            else
-                if min(wave_xGalvo_tmp) < -0.1
-                    xGalvo(i_solo_trial,:) = 10; %indicates bilateral
+            if length(obj.wavesurfer) ~= 0
+                % get AOM and Galvo info from wavesurfer
+                if size(obj.wavesurfer.timestamp,1)>=i_solo_trial
+                    wave_time_tmp = obj.wavesurfer.timestamp(i_solo_trial,:);
+                    wave_aom_tmp = obj.wavesurfer.aom_input_trace(i_solo_trial,:);
+                    wave_xGalvo_tmp = obj.wavesurfer.xGalvo_trace(i_solo_trial,:);
+                    wave_yGalvo_tmp = obj.wavesurfer.yGalvo_trace(i_solo_trial,:);
                 else
-                    xGalvo(i_solo_trial,:) = max(wave_xGalvo_tmp);
+                    wave_time_tmp = 0;
+                    wave_aom_tmp = 0;
+                    wave_xGalvo_tmp = 0;
+                    wave_yGalvo_tmp = 0;
                 end
-            end
+                
+                
+                % laser attributes
+                AOM_input_tmp = round(max(wave_aom_tmp)*10)/10;
+                AOM_data_tmp(i_solo_trial,:) = AOM_input_tmp;
+                
+                if AOM_input_tmp>0
+                    i_laser_on = find(wave_aom_tmp>.05);
+                    t_laser_on = wave_time_tmp(i_laser_on(1));
+                    t_laser_off = wave_time_tmp(i_laser_on(end));
+                    
+                    StimDur_tmp(i_solo_trial,:) = round((t_laser_off-t_laser_on)*10)/10;
+                    StimOnTime_tmp(i_solo_trial,:) = t_laser_on;
+                    StimLevel(i_solo_trial,:) = AOM_input_tmp;
+                else
+                    StimDur_tmp(i_solo_trial,:) = 0;
+                    StimOnTime_tmp(i_solo_trial,:) = 0;
+                    StimLevel(i_solo_trial,:) = 0;
+    
+                end
+                
+                % Galvo x info
+    
+                if max(wave_xGalvo_tmp) < 0.1
+                    xGalvo(i_solo_trial,:) = min(wave_xGalvo_tmp);
+                else
+                    if min(wave_xGalvo_tmp) < -0.1
+                        xGalvo(i_solo_trial,:) = 10; %indicates bilateral
+                    else
+                        xGalvo(i_solo_trial,:) = max(wave_xGalvo_tmp);
+                    end
+                end
 
             % Lick information
-                        
+            else
+                StimDur_tmp = zeros(1, total_trials);
+                StimLevel = zeros(1, total_trials);
+                xGalvo = zeros(1, total_trials);
+                i_good_trials = 1:total_trials;
+            end 
         end
-
 
 
 
@@ -164,6 +169,7 @@ for j = 1:length(lst)
             'earlyLick_time', 'earlyLick_side')
         
         clearvars AOM_data_tmp StimDur_tmp StimOnTime_tmp StimLevel xGalvo
+
 
     end
 end
